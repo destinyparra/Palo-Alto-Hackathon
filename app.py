@@ -254,12 +254,14 @@ def create_entry():
             "emotion": analysis["emotion"],
             "summary": summary,
             "themes": themes,
+            "isReflection": data.get("isReflection", False),
+            "originalEntryId": data.get("originalEntryId", None),
         }
-        # Save reflection fields if present
-        if "isReflection" in data:
-            doc["isReflection"] = bool(data["isReflection"])
-        if "originalEntryId" in data and data["originalEntryId"]:
-            doc["originalEntryId"] = data["originalEntryId"]
+        # # Save reflection fields if present
+        # if "isReflection" in data:
+        #     doc["isReflection"] = bool(data["isReflection"])
+        # if "originalEntryId" in data and data["originalEntryId"]:
+        #     doc["originalEntryId"] = data["originalEntryId"]
 
         result = mongo.db.entries.insert_one(doc)
 
