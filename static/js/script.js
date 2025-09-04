@@ -1,6 +1,8 @@
 // Configuration
 const API_BASE_URL = window.location.origin; // Flask 
-const USER_ID = 'default_user';
+// const USER_ID = 'default_user';
+const USER_ID = 'Destiny_Test'; // For testing purposes
+
 
 // State management
 let entries = [];
