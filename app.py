@@ -290,7 +290,7 @@ def get_insights():
         if period == "weekly":
             start_date = end_date - timedelta(days=7)
         elif period == "monthly":
-            start_date = end_date - timedelta(month=30)
+            start_date = end_date - timedelta(days=30)
         else:
             start_date = end_date - timedelta(days=7)  # default to weekly
 
