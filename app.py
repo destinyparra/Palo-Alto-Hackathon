@@ -16,7 +16,7 @@ from textblob import TextBlob
 import re
 
 # dev testing
-from flask import send_from_directory, redirect, url_for
+from flask import send_from_directory
 
 # for random entry
 import random
@@ -72,26 +72,21 @@ if app.config['OPENAI_API_KEY']:
 else:
     logger.warning("OpenAI API key not found. Weekly summaries will be disabled.")
 
-
+# Add better indexing in setup_database()
 def setup_database():
     try:
-        # create indexes -> better query performance
         db = mongo.db
 
-        # index on userId and createdAt for entries
+        # Existing indexes
         db.entries.create_index([("userId", 1), ("createdAt", -1)])
-        
-        # index on themes for garden aggregation
         db.entries.create_index([("themes", 1)])
-        
-        # index on sentiment for analytics
         db.entries.create_index([("sentiment", 1)])
-        
-        # compound index for insights queries
         db.entries.create_index([("userId", 1), ("createdAt", -1), ("sentiment", 1)])
-
-        # index for weekly summaries
         db.weekly_summaries.create_index([("userId", 1), ("generatedAt", -1)])
+        
+        # Add new indexes for better performance
+        db.entries.create_index([("userId", 1), ("isReflection", 1), ("createdAt", -1)])  # For reflections
+        db.entries.create_index([("originalEntryId", 1)])  # For reflection lookups
         
         logger.info("Database indexes created successfully")
         return True
@@ -208,10 +203,12 @@ def health():
 def dev():
     return send_from_directory('templates', 'index.html')
 
-# root redirect to dev
+
+
+# Serve index.html directly at root
 @app.route('/')
 def root():
-    return redirect(url_for('dev'))
+    return send_from_directory('templates', 'index.html')
  
 
 
@@ -317,6 +314,7 @@ def get_entries():
     except Exception as e:
         logger.error(f"Error fetching entries: {str(e)}")
         return jsonify({"error": "Failed to fetch entries"}), 500
+
 
 
 # Fetching insights
