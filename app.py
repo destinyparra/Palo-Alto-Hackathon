@@ -18,6 +18,14 @@ load_dotenv()
 # Sentiment Analysis Endpoint
 vader = SentimentIntensityAnalyzer()
 
+THEME_CATEGORIES = {
+    "work": ["work","job","boss","project","meeting","deadline","office"],
+    "health": ["health","run","gym","workout","sleep","tired","doctor"],
+    "friends": ["friend","hang","party","buddy","social"],
+    "family": ["family","mom","dad","parent","kids","home","sibling"],
+    "stress": ["stress","overwhelmed","anxious","worry","pressure"],
+    "happiness": ["happy","joy","excited","grateful","smile","laugh"]
+}
 
 app = Flask(__name__)
 CORS(app)
@@ -51,7 +59,8 @@ def create_entry():
         "createdAt": datetime.utcnow(),
         "sentiment": analysis["sentiment"],
         "emotion": analysis["emotion"],
-        # "summary": summarize(text),
+        "summary": summarize(text),
+        "themes": extract_themes(text),
 
     }
     result = mongo.db.entries.insert_one(doc)
@@ -93,13 +102,25 @@ def analyze_sentiment(text: str):
     )
     return {"sentiment": score, "emotion": emotion}
 
-def summarize(text):
-    sentences = [s.strip() for s in re.split(r'(?<=[.!?]) +', text) if s.strip()]
-    if not sentences:
-        return text[:100] + "..."
-    if len(sentences) == 1:
-        return sentences[0]
-    return ". ".join(sentences[:2]) + "."
+
+def summarize(text: str) -> str:
+    parts = [s.strip() for s in re.split(r"[.!?]+", text) if len(s.strip()) > 10]
+    if not parts:
+        return (text[:100] + "...") if len(text) > 100 else text
+    if len(parts) == 1:
+        return parts[0]
+    # take the first two decent sentences
+    return ". ".join(parts[:2]) + "."
+
+def extract_themes(text: str):
+    t = text.lower()
+    found = []
+    for theme, words in THEME_CATEGORIES.items():
+        if any(w in t for w in words):
+            found.append(theme)
+    # dedupe + cap at 3
+    # Remove duplicates, and if there are more than 3 themes, keep only the first 3.
+    return list(dict.fromkeys(found))[:3]
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
