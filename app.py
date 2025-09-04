@@ -134,6 +134,42 @@ def get_insights():
         "period": period
     }), 200
 
+@app.route("/api/garden", methods=["GET"])
+def get_garden():
+    user_id = request.args.get("userId", "default_user")
+
+    pipeline = [
+        {"$match": {"userId": user_id}},
+        {"$unwind": {"path": "$themes", "preserveNullAndEmptyArrays": False}},
+        {"$group": {"_id": "$themes", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+
+    theme_data = list(mongo.db.entries.aggregate(pipeline))
+
+    def stage_for(count: int) -> str:
+        if count >= 10:
+            return "blooming"
+        elif count >= 5:
+            return "growing"
+        elif count >= 2:
+            return "sprouting"
+        return "seedling"
+        
+    # map to objects
+    garden = []
+    for row in theme_data:
+        theme = row["_id"]
+        count = row["count"]
+        garden.append({
+            "theme": theme,
+            "count": count,
+            "stage": stage_for(count)
+        })
+
+    return jsonify(garden), 200
+
+
 def analyze_sentiment(text: str):
     scores = vader.polarity_scores(text)
     v = scores.get('compound', 0.0)  # <- correct key + safe default
