@@ -450,15 +450,35 @@ def summarize(text: str) -> str:
         logger.error(f"Error in summarization: {str(e)}")
         return (text[:100] + "...") if len(text) > 100 else text
 
+
+# Theme extraction
 def extract_themes(text: str):
-    t = text.lower()
-    found = []
-    for theme, words in THEME_CATEGORIES.items():
-        if any(w in t for w in words):
-            found.append(theme)
-    # dedupe + cap at 3
-    # Remove duplicates, and if there are more than 3 themes, keep only the first 3.
-    return list(dict.fromkeys(found))[:3]
+    try:
+        text_lower = text.lower()
+        found_themes = []
+        theme_scores = {}
+
+        # score themes on keyword freq and relevance
+        for theme, keywords in THEME_CATEGORIES.items():
+            score = 0
+            for keyword in keywords:
+                count = text_lower.count(keyword)
+                score += count
+            if score > 0:
+                theme_scores[theme] = score
+                found_themes.append(theme)
+
+        
+        # sort by relevance and return top 3
+        if theme_scores:
+            sorted_themes = sorted(found_themes, key=lambda t: theme_scores[t], reverse=True)
+            return sorted_themes[:3]
+        
+        return []
+    
+    except Exception as e:
+        logger.error(f"Error in theme extraction: {str(e)}")
+        return []
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
