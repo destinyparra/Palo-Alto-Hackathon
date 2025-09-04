@@ -21,6 +21,9 @@ from flask import send_from_directory, redirect, url_for
 # for random entry
 import random
 
+# openai for weekly summary
+import openai
+
 """
 Endpoints:
 GET  /api/prompt          // Random writing prompts
@@ -50,11 +53,21 @@ class Config:
     MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/Palo-Alto-Hackathon')
     SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max payload
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
 app.config.from_object(Config)
 
 # Initialize 
 mongo = PyMongo(app)
 vader = SentimentIntensityAnalyzer()
+
+# OpenAI API key
+if app.config['OPENAI_API_KEY']:
+    openai.api_key = app.config['OPENAI_API_KEY']
+    logger.info("OpenAI API key configured successfully")
+else:
+    logger.warning("OpenAI API key not found. Weekly summaries will be disabled.")
+
 
 def setup_database():
     try:
@@ -72,6 +85,9 @@ def setup_database():
         
         # compound index for insights queries
         db.entries.create_index([("userId", 1), ("createdAt", -1), ("sentiment", 1)])
+
+        # index for weekly summaries
+        db.weekly_summaries.create_index([("userId", 1), ("generatedAt", -1)])
         
         logger.info("Database indexes created successfully")
         return True
@@ -533,6 +549,120 @@ def get_reflections():
     except Exception as e:
         logger.error(f"Error fetching reflections: {str(e)}")
         return jsonify({"error": "Failed to fetch reflections"}), 500
+
+
+# Weekly OpenAI summary generation endpoint
+@app.route("/api/weekly-summary", methods=["GET"])
+def generate_weekly_summary():
+    try:
+        user_id = request.args.get("userId", "default_user")
+
+        # check if openai key is configured
+        if not app.config['OPENAI_API_KEY']:
+            return jsonify({
+                "success": False,
+                "error": "OpenAI API key not configured. Summary generation is unavailable." 
+            }), 503
+    
+        # calc date range entries from past week
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=7)
+
+        # get entries from past week
+        entries = list(mongo.db.entries.find({
+            "userId": user_id,
+            "createdAt": {"$gte": start_date, "$lte": end_date}
+        }).sort("createdAt", 1))  # oldest to newest
+
+        if len(entries) == 0:
+            return jsonify({
+                "success": True,
+                "summary": None,
+                "message": "No entries found for the past week."
+            }), 200
+        
+        if len(entries) < 2:
+            return jsonify({
+                "success": True,
+                "summary": None,
+                "message": "Not enough entries to generate a summary. Need at least 2. Write more this week!"
+            }), 200
+        
+        # check if a summary already exists (within last 24 hrs to prevent overuse)
+        recent_summary = mongo.db.weekly_summaries.find_one({
+            "userId": user_id,
+            "generatedAt": {"$gte": end_date - timedelta(hours=24)}
+        })
+
+        if recent_summary:
+            if hasattr(recent_summary.get("generatedAt"), "isoformat"):
+                recent_summary["generatedAt"] = recent_summary["generatedAt"].isoformat()
+            if hasattr(recent_summary.get("weekStart"), "isoformat"):
+                recent_summary["weekStart"] = recent_summary["weekStart"].isoformat()
+            if hasattr(recent_summary.get("weekEnd"), "isoformat"):
+                recent_summary["weekEnd"] = recent_summary["weekEnd"].isoformat()
+            return jsonify({
+                "success": True,
+                "summary": recent_summary
+            }), 200
+        
+        # Prepare the data for OpenAI
+        entry_texts = []
+        themes_list = []
+        sentiments = []
+
+        for e in entries:
+            entry_texts.append(e.get("text", ""))
+            if e.get("themes"):
+                themes_list.extend(e.get("themes", []))
+            sentiments.append(e.get("sentiment", 0))
+
+        # calc basic stats
+        avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0
+        most_common_themes = []
+        if themes_list:
+            theme_counts = Counter(themes_list)
+            most_common_themes = [theme for theme, count in theme_counts.most_common(3) ]
+        # Counter(themes_list).most_common(3)
+
+        # generate AI Summary
+        ai_summary = generate_weekly_summary(entry_texts, most_common_themes, avg_sentiment, len(entries))
+
+        if not ai_summary:
+            return jsonify({
+                "success": False,
+                "error": "Failed to generate summary from OpenAI."
+            }), 500
+        
+        # Save summary to DB
+        summary_doc = {
+            "userId": user_id,
+            "weekStart": start_date,
+            "weekEnd": end_date,
+            "generatedAiAt": datetime.utcnow(),
+            "summary": ai_summary,
+            "entryCount": len(entries),
+            "avgSentiment": avg_sentiment,
+            "topThemes": most_common_themes
+            # can add metadata later
+        }   
+
+        result = mongo.db.weekly_summaries.insert_one(summary_doc)
+        summary_doc["_id"] = str(result.inserted_id)
+        summary_doc["weekStart"] = summary_doc["weekStart"].isoformat()
+        summary_doc["weekEnd"] = summary_doc["weekEnd"].isoformat()
+        summary_doc["generatedAiAt"] = summary_doc["generatedAiAt"].isoformat()
+
+        return jsonify({
+            "success": True,
+            "summary": summary_doc
+        }), 200
+    except Exception as e:
+        logger.error(f"Error generating weekly summary: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"error": "Failed to generate weekly summary"}), 500
+
+
 
 
 
