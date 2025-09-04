@@ -1,4 +1,3 @@
-```markdown
 # Garden of You — Design Documentation
 
 
