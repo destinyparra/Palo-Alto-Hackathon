@@ -128,7 +128,21 @@ def internal_error(error):
 # Health Check
 @app.route('/healthz')
 def health():
-    return jsonify({"ok": True})
+    try:
+        # Simple DB check
+        mongo.db.command('ping')
+        return jsonify({
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "connected",
+            "version": "1.0.0"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }), 503
 
 # Dev route
 @app.route('/dev')
