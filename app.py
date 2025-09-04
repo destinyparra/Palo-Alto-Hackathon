@@ -376,20 +376,46 @@ def get_garden():
         logger.error(f"Error fetching garden: {str(e)}")
         return jsonify({"error": "Failed to fetch garden"}), 500
 
+# Reflection endpoint
+# @app.route("/api/reflect", methods=["GET"])
+# def get_reflection():
+
+
 
 def analyze_sentiment(text: str):
-    scores = vader.polarity_scores(text)
-    v = scores.get('compound', 0.0)  # <- correct key + safe default
-    b = TextBlob(text).sentiment.polarity
-    score = 0.6 * v + 0.4 * b
-    emotion = (
-        "very_positive" if score >= 0.5 else
-        "positive"       if score >= 0.1 else
-        "neutral"        if score >  -0.1 else
-        "negative"       if score >  -0.5 else
-        "very_negative"
-    )
-    return {"sentiment": score, "emotion": emotion}
+    try:
+        # VADER analysis
+        vader_scores = vader.polarity_scores(text)
+        vader_sentiment = vader_scores.get('compound', 0.0)  # <- correct key + safe default
+
+        # TextBlob analysis
+        blob_sentiment = TextBlob(text).sentiment.polarity
+
+        # Combine scores (weighted average)
+        combined_score = 0.6 * vader_sentiment + 0.4 * blob_sentiment
+
+        # confidence estimation 
+        confidence = 1.0 - abs(vader_sentiment - blob_sentiment) / 2.0
+
+        # emotion categorization
+        emotion = (
+            "very_positive" if combined_score >= 0.5 else
+            "positive" if combined_score >= 0.1 else
+            "neutral" if combined_score >  -0.1 else
+            "negative" if combined_score >  -0.5 else
+            "very_negative"
+        )
+        return {
+                "sentiment": round(combined_score, 3),
+                "confidence": round(confidence, 3),
+                "emotion": emotion,
+                "vader_score": round(vader_sentiment, 3),
+                "textblob_score": round(blob_sentiment, 3)
+            }    
+    except Exception as e:
+        logger.error(f"Error in sentiment analysis: {str(e)}")
+        return {"sentiment": 0, "confidence": 0, "emotion": "neutral"}
+
 
 
 def summarize(text: str) -> str:
