@@ -169,30 +169,54 @@ def get_prompt():
 # Creating journal entry (text only for now)
 @app.route("/api/entries", methods=["POST"])
 def create_entry():
-    data = request.get_json(silent=True) or {}
-    text = (data.get("text") or "").strip()
-    user_id = data.get("userId", "default_user")
+    try:
+        data = request.get_json(silent=True) or {}
+    
+        # validate input
+        errors, clean_data = validate_user_input(data)
+        if errors:
+            return jsonify({"error": "Validation failed", "details": errors}), 400
 
-    if not text:
-        return jsonify({"error": "Text is required"}), 400
+        text = clean_data["text"]
+        user_id = clean_data["userId"]
 
-    analysis = analyze_sentiment(text)
-    doc = {
-        "userId": user_id,
-        "text": text,
-        "createdAt": datetime.utcnow(),
-        "sentiment": analysis["sentiment"],
-        "emotion": analysis["emotion"],
-        "summary": summarize(text),
-        "themes": extract_themes(text),
+        # Analyze content
+        analysis = analyze_sentiment(text)
+        themes = extract_themes(text)
+        summary = summarize(text)
 
-    }
-    result = mongo.db.entries.insert_one(doc)
+        # create document
+        doc = {
+            "userId": user_id,
+            "text": text,
+            "createdAt": datetime.utcnow(),
+            "sentiment": analysis["sentiment"],
+            "emotion": analysis["emotion"],
+            "summary": summarize(text),
+            "themes": extract_themes(text),
+        }
 
-    # Convert ObjectId to string for JSON serialization
-    doc["_id"] = str(result.inserted_id)
-    doc["createdAt"] = doc["createdAt"].isoformat()
-    return jsonify(doc), 201
+        result = mongo.db.entries.insert_one(doc)
+
+        # Format for response
+        doc["_id"] = str(result.inserted_id)
+        doc["createdAt"] = doc["createdAt"].isoformat()
+
+
+        # Logging for debugging
+        logger.info(f"New entry created for user: {user_id}, {len(themes)} themes detected.")
+        
+        return jsonify({
+            "success": True,
+            "entry": doc,
+            "message": "Entry created successfully"
+        }), 201
+    
+    except Exception as e:
+        logger.error(f"Error creating entry: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"error": "Internal Server Error"}), 500
+    
 
 # Fetching journal entries
 @app.route("/api/entries", methods=["GET"])
