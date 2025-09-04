@@ -23,6 +23,7 @@ import random
 
 # openai for weekly summary
 import openai
+import json
 
 """
 Endpoints:
@@ -32,6 +33,9 @@ GET  /api/entries         // Fetch entries with pagination
 GET  /api/insights        // Weekly/monthly analytics
 GET  /api/garden          // Theme-based plant visualization
 GET  /api/reflect         // Past entries for reflection
+GET  /api/reflections     // Get all reflections
+GET  /api/weekly-summary  // AI-generated weekly summary
+GET  /api/weekly-summaries // Past weekly summaries
 """
 
 
@@ -662,6 +666,95 @@ def generate_weekly_summary():
         logger.error(traceback.format_exc())
         return jsonify({"error": "Failed to generate weekly summary"}), 500
 
+
+# get past weekly summaries
+@app.route("/api/weekly-summaries", methods=["GET"])
+def get_past_weekly_summaries():
+    try:
+        user_id = request.args.get("userId", "default_user")
+        limit = min(int(request.args.get("limit", 10)), 20)  # max 20
+        skip = int(request.args.get("skip", 0))
+        
+        summaries = list(
+            mongo.db.weekly_summaries.find({"userId": user_id})
+            .sort("generatedAiAt", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+
+        # format dates
+        for summary in summaries:
+            summary["_id"] = str(summary["_id"])
+            if hasattr(summary.get("weekStart"), "isoformat"):
+                summary["weekStart"] = summary["weekStart"].isoformat()
+            if hasattr(summary.get("weekEnd"), "isoformat"):
+                summary["weekEnd"] = summary["weekEnd"].isoformat()
+            if hasattr(summary.get("generatedAt"), "isoformat"):
+                summary["generatedAt"] = summary["generatedAt"].isoformat()
+        
+        return jsonify({
+            "success": True,
+            "summaries": summaries,
+            "count": len(summaries),
+            "hasMore": len(summaries) == limit
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching past weekly summaries: {str(e)}")
+        return jsonify({"error": "Failed to fetch past weekly summaries"}), 500
+    
+# AI Summary Generation
+def generate_weekly_summary(entry_texts, top_themes, avg_sentiment, entry_count):
+    try:
+        # Combine entries for analysis (limit to prevent token overflow)
+        combined_text = "\n\n".join(entry_texts)
+        if len(combined_text) > 3000:  # Limit to ~3000 chars to stay within token limits
+            combined_text = combined_text[:3000] + "..."
+
+        # Create sentiment description
+        sentiment_desc = "neutral"
+        if avg_sentiment > 0.3:
+            sentiment_desc = "quite positive"
+        elif avg_sentiment > 0.1:
+            sentiment_desc = "somewhat positive"
+        elif avg_sentiment < -0.3:
+            sentiment_desc = "quite negative"
+        elif avg_sentiment < -0.1:
+            sentiment_desc = "somewhat negative"
+
+        # Create prompt for OpenAI
+        prompt = f"""You are analyzing a week's worth of personal journal entries. Please create a thoughtful, balanced weekly summary that acknowledges both positive and challenging aspects of the person's week. Be honest about difficult emotions while also highlighting growth and insights.
+
+Journal entries from this week:
+{combined_text}
+
+Key themes that appeared: {', '.join(top_themes) if top_themes else 'No clear themes'}
+Overall emotional tone: {sentiment_desc}
+Number of entries: {entry_count}
+
+Please write a 3-4 paragraph summary that:
+1. Captures the main experiences and emotions of the week
+2. Identifies key patterns or themes (both positive and challenging)
+3. Acknowledges any growth, insights, or changes observed
+4. Maintains an honest, supportive tone that validates all emotions
+
+Do not be overly positive or dismissive of negative emotions. Be authentic and balanced."""
+
+        # Call OpenAI API
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a thoughtful, empathetic assistant that helps people reflect on their personal journal entries. You provide balanced, honest insights that validate all emotions while identifying patterns of growth."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=400,
+            temperature=0.7
+        )
+
+        return response.choices[0].message.content.strip()
+
+    except Exception as e:
+        logger.error(f"OpenAI API error: {str(e)}")
+        return None
 
 
 
