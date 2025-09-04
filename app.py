@@ -192,14 +192,14 @@ def health():
         mongo.db.command('ping')
         return jsonify({
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "database": "connected",
             "version": "1.0.0"
         })
     except Exception as e:
         return jsonify({
             "status": "unhealthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "error": str(e)
         }), 503
 
@@ -221,7 +221,7 @@ def get_prompt():
     import random
     return jsonify({
         "prompt": random.choice(WRITING_PROMPTS),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }), 200
 
 
@@ -249,7 +249,7 @@ def create_entry():
         doc = {
             "userId": user_id,
             "text": text,
-            "createdAt": datetime.utcnow(),
+            "createdAt": datetime.now(timezone.utc),
             "sentiment": analysis["sentiment"],
             "emotion": analysis["emotion"],
             "summary": summary,
@@ -328,7 +328,7 @@ def get_insights():
 
         # calc date range
         # change later to use accurate month handling
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         if period == "weekly":
             start_date = end_date - timedelta(days=7)
         elif period == "monthly":
@@ -454,9 +454,9 @@ def get_reflection():
         exclude_ids = request.args.getlist("exclude")  # Allow excluding specific entry IDs
 
         # Only get entries older than one day old for reflections
-        # one_day_ago = datetime.utcnow() - timedelta(days=1)
+        # one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
         # dev test to allow same-day reflections
-        one_day_ago = datetime.utcnow() - timedelta(hours=1)
+        one_day_ago = datetime.now(timezone.utc) - timedelta(hours=1)
 
         # Build query to exclude specific IDs
         query = {
@@ -571,7 +571,7 @@ def get_weekly_summary():
             }), 503
     
         # calc date range entries from past week
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=7)
 
         # get entries from past week
