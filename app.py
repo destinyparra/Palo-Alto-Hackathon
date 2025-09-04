@@ -7,6 +7,7 @@ from collections import Counter
 import os
 import logging
 import traceback
+import html
 
 
 # analysis helpers
@@ -17,7 +18,15 @@ import re
 # dev testing
 from flask import send_from_directory, redirect, url_for
 
-
+"""
+Endpoints:
+GET  /api/prompt          // Random writing prompts
+POST /api/entries         // Create new journal entries  
+GET  /api/entries         // Fetch entries with pagination
+GET  /api/insights        // Weekly/monthly analytics
+GET  /api/garden          // Theme-based plant visualization
+GET  /api/reflect         // Past entries for reflection
+"""
 
 
 
@@ -35,7 +44,7 @@ CORS(app)
 
 class Config:
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/Palo-Alto-Hackathon')
+    MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/Palo-Alto-Hackathon')
     SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max payload
 app.config.from_object(Config)
@@ -134,8 +143,8 @@ def validate_user_input(data):
     if len(user_id) > 100:
         errors.append("userId is too long, must be under 100 characters.")
 
-    # Sanitize text basic XSS protection - might change later to smth stronger than just regex stripping
-    text = re.sub(r'<[^>]+>', '', text)  # Remove HTML tags
+    # sanitize text
+    text = html.escape(text)  # Escape HTML special characters
     
     return errors, {"text": text, "userId": user_id}
 
@@ -174,7 +183,7 @@ def health():
 # Dev route
 @app.route('/dev')
 def dev():
-    return send_from_directory('static', 'dev.html')
+    return send_from_directory('templates', 'index.html')
 
 # root redirect to dev
 @app.route('/')
@@ -219,11 +228,13 @@ def create_entry():
             "createdAt": datetime.utcnow(),
             "sentiment": analysis["sentiment"],
             "emotion": analysis["emotion"],
-            "summary": summarize(text),
-            "themes": extract_themes(text),
+            "summary": summary,
+            "themes": themes,
         }
 
         result = mongo.db.entries.insert_one(doc)
+
+
 
         # Format for response
         doc["_id"] = str(result.inserted_id)
