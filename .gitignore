@@ -1,0 +1,36 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# ---- Virtual environments ----
+venv/
+ENV/
+env/
+.venv/
+
+# ---- IDE/editor files ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# ---- Environment / secrets ----
+.env
+*.env
+
+# ---- Logs ----
+*.log
+
+# ---- Coverage / testing ----
+.coverage
+coverage/
+htmlcov/
+pytest_cache/
