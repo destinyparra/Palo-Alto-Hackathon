@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_pymongo import PyMongo
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from collections import Counter
 import os
 
 # analysis helpers
@@ -87,6 +88,51 @@ def get_entries():
             item["createdAt"] = item["createdAt"].isoformat()
     return jsonify(items), 200
 
+
+@app.route("/api/insights", methods=["GET"])
+def get_insights():
+    user_id = request.args.get("userId", "default_user")
+    period = request.args.get("period", "weekly") #weekly or monthly
+    end_date = datetime.utcnow()
+    start_date = end_date - (timedelta(days=7) if period == "weekly" else timedelta(days=30))
+
+    items = list(mongo.db.entires.find({
+        "userId": user_id,
+        "createdAt": {"$gte": start_date, "$lte": end_date}
+    }))
+
+    if not items:
+            return jsonify({
+                "userId": user_id,
+                "entryCount": 0,
+                "avgSentiment": 0,
+                "topThemes": [],
+                "themeCounts": {},
+                "startDate": start_date.isoformat(),
+                "endDate": end_date.isoformat(),
+                "period": period
+            }), 200
+    
+    sentiments = [e.get("sentiment", 0) for e in items]
+    avg_sentiment = sum(sentiments) / len(sentiments)
+
+    all_themes = []
+    for e in items:
+        if isinstance(e.get("themes"), list):
+            all_themes.extend(e.get("themes"))
+    counts = Counter(all_themes)
+    top3 = [k for k, _ in counts.most_common(3)]
+
+    return jsonify({
+        "userId": user_id,
+        "entryCount": len(items),
+        "avgSentiment": avg_sentiment,
+        "topThemes": top3,
+        "themeCounts": dict(counts),
+        "startDate": start_date.isoformat(),
+        "endDate": end_date.isoformat(),
+        "period": period
+    }), 200
 
 def analyze_sentiment(text: str):
     scores = vader.polarity_scores(text)
