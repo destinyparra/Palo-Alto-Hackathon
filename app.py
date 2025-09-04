@@ -149,11 +149,21 @@ def health():
 def dev():
     return send_from_directory('static', 'dev.html')
 
-# 404 on '/' redirects to /dev
+# root redirect to dev
 @app.route('/')
 def root():
     return redirect(url_for('dev'))
  
+
+
+# Writing prompt endpoint
+@app.route("/api/prompt", methods=["GET"])
+def get_prompt():
+    import random
+    return jsonify({
+        "prompt": random.choice(WRITING_PROMPTS),
+        "timestamp": datetime.utcnow().isoformat()
+    }), 200
 
 
 # Creating journal entry (text only for now)
