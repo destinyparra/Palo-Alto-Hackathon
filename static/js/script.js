@@ -32,6 +32,44 @@ const themeData = {
     'travel': { emoji: '🌴', name: 'Palm Tree', color: 'from-green-400 to-teal-500' }
 };
 
+// Template Helper Functions
+function getTemplate(templateId) {
+    const template = document.getElementById(templateId);
+    return template.content.cloneNode(true);
+}
+
+function createThemeBadge(theme) {
+    const template = getTemplate('theme-badge-template');
+    const themeInfo = themeData[theme] || { emoji: '🌱', name: theme };
+
+    template.querySelector('.theme-emoji').textContent = themeInfo.emoji;
+    template.querySelector('.theme-name').textContent = theme;
+
+    return template;
+}
+
+function createToast(message, type = 'info') {
+    const template = getTemplate('toast-template');
+    const toast = template.querySelector('div');
+
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+
+    // Add border classes individually
+    toast.classList.add('border-l-4');
+    if (type === 'success') {
+        toast.classList.add('border-green-400');
+    } else if (type === 'error') {
+        toast.classList.add('border-red-400');
+    } else {
+        toast.classList.add('border-blue-400');
+    }
+
+    template.querySelector('.toast-icon').textContent = icon;
+    template.querySelector('.toast-message').textContent = message;
+
+    return template;
+}
+
 // API Functions
 async function apiRequest(endpoint, options = {}) {
     try {
@@ -200,74 +238,79 @@ function updateEntriesList() {
     const container = document.getElementById('entries-list');
 
     if (entries.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-12">
-                <span class="text-8xl mb-6 block float">🌱</span>
-                <p class="text-white/70 text-lg">No entries yet</p>
-                <p class="text-white/50">Start writing to see your thoughts bloom!</p>
-            </div>
-        `;
+        const emptyTemplate = getTemplate('empty-entries-template');
+        container.innerHTML = '';
+        container.appendChild(emptyTemplate);
         return;
     }
 
-    container.innerHTML = entries.map(entry => {
+    // Clear container
+    container.innerHTML = '';
+
+    entries.forEach(entry => {
+        const template = getTemplate('entry-card-template');
+        const card = template.querySelector('.entry-card');
+
+        // Set up basic data
         const date = new Date(entry.createdAt);
         const sentimentEmoji = entry.sentiment > 0.1 ? '😊' : entry.sentiment < -0.1 ? '😔' : '😐';
         const isReflection = entry.isReflection;
         const expanded = expandedEntries[entry._id];
-        let reflectionOriginal = '';
-        if (isReflection && expanded && entry.originalEntryId) {
-            // Show loading spinner, will be replaced after fetch
-            reflectionOriginal = `<div class="bg-white/10 rounded-xl p-4 mb-2 text-sm text-gray-700" id="original-entry-${entry._id}">Loading original entry...</div>`;
-        }
-        return `
-            <div class="entry-card rounded-2xl p-6 shadow-lg bloom ${isReflection ? 'border-l-4 border-purple-400' : ''} cursor-pointer select-none" data-entry-id="${entry._id}">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-gray-600 font-medium">
-                            ${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        ${isReflection ? '<span class="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full font-medium">Reflection</span>' : ''}
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-2xl">${sentimentEmoji}</span>
-                        ${entry.confidence ? `<span class="text-xs text-gray-500">${Math.round(entry.confidence * 100)}%</span>` : ''}
-                    </div>
-                </div>
-                ${expanded ? `
-                    ${isReflection && entry.originalEntryId ? reflectionOriginal : ''}
-                    <p class="text-gray-800 mb-4 leading-relaxed">${entry.text}</p>
-                ` : `
-                    <p class="text-gray-800 mb-4 leading-relaxed">${entry.summary || entry.text.substring(0, 150) + '...'}</p>
-                `}
-                ${entry.themes && entry.themes.length > 0 ? `
-                    <div class="flex flex-wrap gap-2">
-                        ${entry.themes.map(theme => `
-                            <span class="theme-badge px-3 py-1 rounded-full text-xs font-semibold text-gray-700">
-                                ${themeData[theme]?.emoji || '🌱'} ${theme}
-                            </span>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                ${entry.wordCount ? `
-                    <div class="mt-2 text-xs text-gray-500">
-                        ${entry.wordCount} words • ${entry.emotion || 'neutral'} emotion
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }).join('');
 
-    // Add click handlers for expand/collapse
-    Array.from(container.getElementsByClassName('entry-card')).forEach(card => {
+        // Populate date
+        const dateSpan = template.querySelector('.entry-date');
+        dateSpan.textContent = `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+        // Show reflection badge if needed
+        if (isReflection) {
+            card.classList.add('border-l-4', 'border-purple-400');
+            template.querySelector('.reflection-badge').classList.remove('hidden');
+        }
+
+        // Set sentiment
+        template.querySelector('.sentiment-emoji').textContent = sentimentEmoji;
+        if (entry.confidence) {
+            template.querySelector('.confidence-score').textContent = `${Math.round(entry.confidence * 100)}%`;
+        }
+
+        // Set entry text
+        const entryText = template.querySelector('.entry-text');
+        if (expanded) {
+            entryText.textContent = entry.text;
+
+            // Handle original entry for reflections
+            if (isReflection && entry.originalEntryId) {
+                const originalContainer = template.querySelector('.original-entry-container');
+                originalContainer.innerHTML = `<div class="bg-white/10 rounded-xl p-4 mb-2 text-sm text-gray-700" id="original-entry-${entry._id}">Loading original entry...</div>`;
+            }
+        } else {
+            entryText.textContent = entry.summary || entry.text.substring(0, 150) + '...';
+        }
+
+        // Add themes
+        if (entry.themes && entry.themes.length > 0) {
+            const themesContainer = template.querySelector('.themes-container');
+            entry.themes.forEach(theme => {
+                const themeBadge = createThemeBadge(theme);
+                themesContainer.appendChild(themeBadge);
+            });
+        }
+
+        // Add metadata
+        if (entry.wordCount) {
+            const metadata = template.querySelector('.entry-metadata');
+            metadata.textContent = `${entry.wordCount} words • ${entry.emotion || 'neutral'} emotion`;
+        }
+
+        // Set up click handler
+        card.setAttribute('data-entry-id', entry._id);
         card.addEventListener('click', async function (e) {
-            // Prevent click on links/buttons inside card
             if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
             const entryId = card.getAttribute('data-entry-id');
             expandedEntries[entryId] = !expandedEntries[entryId];
             updateEntriesList();
-            // If expanded and is reflection, fetch original entry if needed
-            const entry = entries.find(en => en._id === entryId);
+
+            // Handle original entry loading for reflections
             if (expandedEntries[entryId] && entry && entry.isReflection && entry.originalEntryId) {
                 const originalDiv = document.getElementById(`original-entry-${entryId}`);
                 if (originalDiv) {
@@ -285,6 +328,8 @@ function updateEntriesList() {
                 }
             }
         });
+
+        container.appendChild(template);
     });
 }
 
@@ -316,75 +361,67 @@ function updateReflectionsList() {
     const container = document.getElementById('reflections-content');
 
     if (reflections.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-16">
-                <span class="text-8xl mb-6 block float">💎</span>
-                <h3 class="text-3xl font-bold text-white mb-4">No Reflections Yet</h3>
-                <p class="text-white/70 text-lg mb-8">Start reflecting on your past entries to build your collection of insights!</p>
-                <button onclick="showSection('reflect')" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105 shadow-xl">
-                    ✨ Start Reflecting
-                </button>
-            </div>
-        `;
+        const emptyTemplate = getTemplate('empty-reflections-template');
+        container.innerHTML = '';
+        container.appendChild(emptyTemplate);
         return;
     }
 
-    container.innerHTML = `
-        <div class="space-y-8">
-            ${reflections.map(reflection => {
+    container.innerHTML = '';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'space-y-8';
+
+    reflections.forEach(reflection => {
+        const template = getTemplate('reflection-card-template');
         const date = new Date(reflection.createdAt);
         const originalDate = reflection.originalEntry ? new Date(reflection.originalEntry.createdAt) : null;
 
-        return `
-                    <div class="glass rounded-3xl shadow-2xl p-8 card-hover">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="flex items-center space-x-3">
-                                <span class="text-3xl float">💭</span>
-                                <div>
-                                    <h3 class="text-xl font-bold text-white">Reflection from ${date.toLocaleDateString()}</h3>
-                                    ${originalDate ? `<p class="text-sm text-white/70">Reflecting on entry from ${originalDate.toLocaleDateString()}</p>` : ''}
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
-                                <span class="text-2xl">${reflection.sentiment > 0.1 ? '😊' : reflection.sentiment < -0.1 ? '😔' : '😐'}</span>
-                            </div>
-                        </div>
+        // Set dates
+        template.querySelector('.reflection-date').textContent = `Reflection from ${date.toLocaleDateString()}`;
+        if (originalDate) {
+            template.querySelector('.original-date').textContent = `Reflecting on entry from ${originalDate.toLocaleDateString()}`;
+        }
 
-                        ${reflection.originalEntry ? `
-                            <div class="mb-6 p-4 bg-white/10 rounded-2xl border-l-4 border-white/30">
-                                <p class="text-sm text-white/70 mb-2">Original Entry:</p>
-                                <p class="text-white/90 italic">
-                                    "${reflection.originalEntry.text.length > 150 ? reflection.originalEntry.text.substring(0, 150) + '...' : reflection.originalEntry.text}"
-                                </p>
-                            </div>
-                        ` : ''}
+        // Set sentiment
+        const sentimentEmoji = reflection.sentiment > 0.1 ? '😊' : reflection.sentiment < -0.1 ? '😔' : '😐';
+        template.querySelector('.reflection-sentiment').textContent = sentimentEmoji;
 
-                        <div class="mb-4">
-                            <p class="text-white leading-relaxed">${reflection.text}</p>
-                        </div>
+        // Set original entry if exists
+        if (reflection.originalEntry) {
+            const originalSection = template.querySelector('.original-entry-section');
+            originalSection.classList.remove('hidden');
+            const originalText = reflection.originalEntry.text.length > 150 ?
+                reflection.originalEntry.text.substring(0, 150) + '...' :
+                reflection.originalEntry.text;
+            template.querySelector('.original-entry-text').textContent = `"${originalText}"`;
+        }
 
-                        ${reflection.themes && reflection.themes.length > 0 ? `
-                            <div class="flex flex-wrap gap-2">
-                                ${reflection.themes.map(theme => `
-                                    <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-medium">
-                                        ${themeData[theme]?.emoji || '🌱'} ${theme}
-                                    </span>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-    }).join('')}
-            
-            ${hasMoreReflections ? `
-                <div class="text-center pt-8">
-                    <button onclick="loadMoreReflections()" class="text-white/70 hover:text-white underline font-medium">
-                        Load more reflections
-                    </button>
-                </div>
-            ` : ''}
-        </div>
-    `;
+        // Set reflection text
+        template.querySelector('.reflection-text').textContent = reflection.text;
+
+        // Add themes
+        if (reflection.themes && reflection.themes.length > 0) {
+            const themesContainer = template.querySelector('.reflection-themes');
+            reflection.themes.forEach(theme => {
+                const span = document.createElement('span');
+                span.className = 'bg-white/20 text-white px-3 py-1 rounded-full text-sm font-medium';
+                span.innerHTML = `${themeData[theme]?.emoji || '🌱'} ${theme}`;
+                themesContainer.appendChild(span);
+            });
+        }
+
+        wrapper.appendChild(template);
+    });
+
+    // Add load more button if needed
+    if (hasMoreReflections) {
+        const loadMoreDiv = document.createElement('div');
+        loadMoreDiv.className = 'text-center pt-8';
+        loadMoreDiv.innerHTML = '<button onclick="loadMoreReflections()" class="text-white/70 hover:text-white underline font-medium">Load more reflections</button>';
+        wrapper.appendChild(loadMoreDiv);
+    }
+
+    container.appendChild(wrapper);
 }
 
 async function loadMoreReflections() {
@@ -410,65 +447,54 @@ function updateGarden(gardenData) {
     const container = document.getElementById('garden-grid');
 
     if (!gardenData || gardenData.length === 0) {
-        container.innerHTML = `
-            <div class="col-span-full text-center py-16">
-                <span class="text-8xl mb-6 block float">🏡</span>
-                <h3 class="text-3xl font-bold text-white mb-4">Your Garden Awaits</h3>
-                <p class="text-white/70 text-lg mb-8">Start journaling to plant your first seeds!</p>
-                <button onclick="showSection('journal')" class="bg-gradient-to-r from-green-500 to-blue-500 text-white px-8 py-4 rounded-xl font-bold hover:from-green-600 hover:to-blue-600 transition-all transform hover:scale-105 shadow-xl">
-                    🌱 Plant Your First Seed
-                </button>
-            </div>
-        `;
+        const emptyTemplate = getTemplate('empty-garden-template');
+        container.innerHTML = '';
+        container.appendChild(emptyTemplate);
         return;
     }
 
-    container.innerHTML = gardenData.map(plant => {
+    container.innerHTML = '';
+
+    gardenData.forEach(plant => {
+        const template = getTemplate('plant-card-template');
         const themeInfo = themeData[plant.theme] || { emoji: '🌱', name: 'Plant', color: 'from-green-400 to-green-600' };
         const progress = plant.stage === 'blooming' ? 100 :
             plant.stage === 'growing' ? 75 :
                 plant.stage === 'sprouting' ? 40 : 15;
 
-        return `
-            <div class="plant-card rounded-3xl shadow-2xl p-8 card-hover relative overflow-hidden">
-                <div class="absolute inset-0 opacity-10 bg-gradient-to-br ${themeInfo.color}"></div>
-                
-                <div class="text-center mb-6 relative z-10">
-                    <div class="text-6xl mb-4 float relative">
-                        ${themeInfo.emoji}
-                        ${plant.stage === 'blooming' ? '<div class="absolute -top-2 -right-2 text-yellow-400 text-lg sparkle">✨</div>' : ''}
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-2">${themeInfo.name || plant.theme.charAt(0).toUpperCase() + plant.theme.slice(1)}</h3>
-                    <p class="text-gray-600 text-sm capitalize">${plant.theme} theme</p>
-                </div>
+        // Set background gradient
+        const bg = template.querySelector('.plant-bg');
+        bg.className = `plant-bg absolute inset-0 opacity-10 bg-gradient-to-br ${themeInfo.color}`;
 
-                <div class="mb-6 relative z-10">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-semibold text-gray-700 capitalize">${plant.stage}</span>
-                        <span class="text-sm text-gray-500">${plant.count} entries</span>
-                    </div>
-                    
-                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r ${themeInfo.color}" 
-                             style="width: ${progress}%;">
-                        </div>
-                    </div>
-                </div>
+        // Set emoji and sparkle for blooming
+        template.querySelector('.plant-emoji').textContent = themeInfo.emoji;
+        if (plant.stage === 'blooming') {
+            template.querySelector('.sparkle-indicator').classList.remove('hidden');
+        }
 
-                <div class="text-center relative z-10">
-                    <span class="inline-block bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold border border-gray-200">
-                        ${plant.theme.charAt(0).toUpperCase() + plant.theme.slice(1)}
-                    </span>
-                </div>
+        // Set plant info
+        template.querySelector('.plant-name').textContent = themeInfo.name || plant.theme.charAt(0).toUpperCase() + plant.theme.slice(1);
+        template.querySelector('.plant-theme').textContent = `${plant.theme} theme`;
+        template.querySelector('.plant-stage').textContent = plant.stage;
+        template.querySelector('.plant-count').textContent = `${plant.count} entries`;
 
-                ${plant.nextStageNeeds && plant.nextStageNeeds > 0 ? `
-                    <div class="mt-4 text-center text-xs text-gray-500 relative z-10">
-                        ${plant.nextStageNeeds} more entries to reach next stage! 🌸
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }).join('');
+        // Set progress bar
+        const progressBar = template.querySelector('.plant-progress');
+        progressBar.className = `plant-progress h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r ${themeInfo.color}`;
+        progressBar.style.width = `${progress}%`;
+
+        // Set badge
+        template.querySelector('.plant-badge').textContent = plant.theme.charAt(0).toUpperCase() + plant.theme.slice(1);
+
+        // Set next stage info
+        if (plant.nextStageNeeds && plant.nextStageNeeds > 0) {
+            const nextStage = template.querySelector('.plant-next-stage');
+            nextStage.classList.remove('hidden');
+            nextStage.textContent = `${plant.nextStageNeeds} more entries to reach next stage! 🌸`;
+        }
+
+        container.appendChild(template);
+    });
 }
 
 function updateGardenStats(response) {
@@ -483,31 +509,22 @@ function updateGardenStats(response) {
         const seedlingPlants = response.garden.filter(p => p.stage === 'seedling').length;
         const totalWaterings = response.garden.reduce((sum, p) => sum + p.count, 0);
 
-        statsGrid.innerHTML = `
-            <div class="text-center p-6 bg-white/20 rounded-xl shadow-sm">
-                <span class="text-4xl mb-3 block float">🌳</span>
-                <h4 class="font-bold text-2xl text-white">${response.bloomingPlants}</h4>
-                <p class="text-white/70 text-sm">Blooming Plants</p>
-            </div>
-            
-            <div class="text-center p-6 bg-white/20 rounded-xl shadow-sm">
-                <span class="text-4xl mb-3 block float">🌿</span>
-                <h4 class="font-bold text-2xl text-white">${growingPlants}</h4>
-                <p class="text-white/70 text-sm">Growing Plants</p>
-            </div>
-            
-            <div class="text-center p-6 bg-white/20 rounded-xl shadow-sm">
-                <span class="text-4xl mb-3 block float">🌱</span>
-                <h4 class="font-bold text-2xl text-white">${sproutingPlants + seedlingPlants}</h4>
-                <p class="text-white/70 text-sm">Young Plants</p>
-            </div>
-            
-            <div class="text-center p-6 bg-white/20 rounded-xl shadow-sm">
-                <span class="text-4xl mb-3 block float">💧</span>
-                <h4 class="font-bold text-2xl text-white">${totalWaterings}</h4>
-                <p class="text-white/70 text-sm">Total Waterings</p>
-            </div>
-        `;
+        statsGrid.innerHTML = '';
+
+        const stats = [
+            { emoji: '🌳', value: response.bloomingPlants, label: 'Blooming Plants' },
+            { emoji: '🌿', value: growingPlants, label: 'Growing Plants' },
+            { emoji: '🌱', value: sproutingPlants + seedlingPlants, label: 'Young Plants' },
+            { emoji: '💧', value: totalWaterings, label: 'Total Waterings' }
+        ];
+
+        stats.forEach(stat => {
+            const template = getTemplate('garden-stat-template');
+            template.querySelector('.stat-emoji').textContent = stat.emoji;
+            template.querySelector('.stat-value').textContent = stat.value;
+            template.querySelector('.stat-label').textContent = stat.label;
+            statsGrid.appendChild(template);
+        });
     }
 }
 
@@ -527,13 +544,9 @@ function updateInsights(data) {
     const container = document.getElementById('insights-content');
 
     if (data.entryCount === 0) {
-        container.innerHTML = `
-            <div class="text-center py-16">
-                <span class="text-8xl mb-6 block float">💎</span>
-                <h3 class="text-3xl font-bold text-white mb-4">Insights Await Discovery</h3>
-                <p class="text-white/70 text-lg">Write more entries to unlock insights about your emotional patterns and themes!</p>
-            </div>
-        `;
+        const emptyTemplate = getTemplate('empty-insights-template');
+        container.innerHTML = '';
+        container.appendChild(emptyTemplate);
         return;
     }
 
@@ -550,96 +563,115 @@ function updateInsights(data) {
             data.avgSentiment > -0.1 ? 'Neutral' :
                 data.avgSentiment > -0.3 ? 'Negative' : 'Very Negative';
 
-    container.innerHTML = `
+    // Build insights HTML dynamically
+    const sentimentSection = createSentimentSection(sentimentEmoji, sentimentDescription, sentimentColor, data.avgSentiment);
+    const themesSection = createThemesSection(data.topThemes, data.themeCounts);
+    const advancedSection = data.insights ? createAdvancedInsightsSection(data.insights) : '';
+    const summarySection = createSummarySection(data);
+
+    container.innerHTML = sentimentSection + themesSection + advancedSection + summarySection;
+}
+
+function createSentimentSection(emoji, description, color, sentiment) {
+    return `
         <div class="grid lg:grid-cols-3 gap-8 mb-12">
-            <!-- Sentiment Overview -->
             <div class="glass rounded-3xl shadow-2xl p-8 card-hover">
                 <div class="text-center">
-                    <span class="text-6xl mb-6 block float">${sentimentEmoji}</span>
+                    <span class="text-6xl mb-6 block float">${emoji}</span>
                     <h3 class="text-2xl font-bold text-white mb-4">Emotional Weather</h3>
-                    <p class="text-3xl font-bold mb-4 ${sentimentColor}">
-                        ${sentimentDescription}
+                    <p class="text-3xl font-bold mb-4 ${color}">
+                        ${description}
                     </p>
                     <div class="w-full bg-white/20 rounded-full h-3 mb-4">
                         <div class="bg-gradient-to-r from-red-400 via-yellow-400 to-green-400 h-3 rounded-full relative">
                             <div class="absolute bg-white border-2 border-gray-400 rounded-full w-5 h-5 -top-1 transform -translate-x-2.5" 
-                                 style="left: ${((data.avgSentiment + 1) * 50)}%;">
+                                 style="left: ${((sentiment + 1) * 50)}%;">
                             </div>
                         </div>
                     </div>
-                    <p class="text-sm text-white/70">Score: ${data.avgSentiment.toFixed(3)}</p>
+                    <p class="text-sm text-white/70">Score: ${sentiment.toFixed(3)}</p>
                 </div>
-            </div>
+            </div>`;
+}
 
-            <!-- Top Themes -->
+function createThemesSection(topThemes, themeCounts) {
+    let themesHtml = '';
+    if (topThemes && topThemes.length > 0) {
+        themesHtml = topThemes.map(theme => {
+            const maxCount = Math.max(...Object.values(themeCounts));
+            const percentage = (themeCounts[theme] / maxCount * 100);
+            return `
+                <div class="flex items-center justify-between p-4 bg-white/10 rounded-2xl">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-3xl">${themeData[theme]?.emoji || '🌱'}</span>
+                        <div>
+                            <h4 class="font-semibold text-white capitalize">${theme}</h4>
+                            <p class="text-sm text-white/70">${themeData[theme]?.name || 'Plant'}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="w-32 bg-white/20 rounded-full h-2">
+                            <div class="bg-gradient-to-r ${themeData[theme]?.color || 'from-green-400 to-green-600'} h-2 rounded-full transition-all duration-1000" 
+                                 style="width: ${percentage}%"></div>
+                        </div>
+                        <span class="text-sm font-medium text-white">${themeCounts[theme]}</span>
+                    </div>
+                </div>`;
+        }).join('');
+    } else {
+        themesHtml = `
+            <div class="text-center py-8">
+                <span class="text-6xl mb-4 block float">🌱</span>
+                <p class="text-white/70">No themes detected yet</p>
+            </div>`;
+    }
+
+    return `
             <div class="lg:col-span-2 glass rounded-3xl shadow-2xl p-8 card-hover">
                 <div class="flex items-center mb-6">
                     <span class="text-3xl mr-3 float">🌿</span>
                     <h3 class="text-2xl font-bold text-white">Themes in Focus</h3>
                 </div>
-                
-                ${data.topThemes && data.topThemes.length > 0 ? `
-                    <div class="space-y-4">
-                        ${data.topThemes.map(theme => `
-                            <div class="flex items-center justify-between p-4 bg-white/10 rounded-2xl">
-                                <div class="flex items-center space-x-4">
-                                    <span class="text-3xl">${themeData[theme]?.emoji || '🌱'}</span>
-                                    <div>
-                                        <h4 class="font-semibold text-white capitalize">${theme}</h4>
-                                        <p class="text-sm text-white/70">${themeData[theme]?.name || 'Plant'}</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-32 bg-white/20 rounded-full h-2">
-                                        <div class="bg-gradient-to-r ${themeData[theme]?.color || 'from-green-400 to-green-600'} h-2 rounded-full transition-all duration-1000" 
-                                             style="width: ${(data.themeCounts[theme] / Math.max(...Object.values(data.themeCounts)) * 100)}%"></div>
-                                    </div>
-                                    <span class="text-sm font-medium text-white">${data.themeCounts[theme]}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : `
-                    <div class="text-center py-8">
-                        <span class="text-6xl mb-4 block float">🌱</span>
-                        <p class="text-white/70">No themes detected yet</p>
-                    </div>
-                `}
-            </div>
-        </div>
-
-        <!-- Advanced Insights -->
-        ${data.insights ? `
-            <div class="glass rounded-3xl p-8 shadow-xl mb-12">
-                <div class="text-center mb-8">
-                    <span class="text-4xl mb-4 block float">🧠</span>
-                    <h3 class="text-2xl font-bold text-white mb-2">Advanced Insights</h3>
-                    <p class="text-white/70">Deeper patterns in your writing</p>
-                </div>
-                
-                <div class="grid md:grid-cols-3 gap-6">
-                    <div class="text-center p-6 bg-white/10 rounded-2xl">
-                        <span class="text-4xl mb-3 block float">📝</span>
-                        <h4 class="font-bold text-2xl text-white">${data.insights.avgWordCount || 0}</h4>
-                        <p class="text-white/70 text-sm">Avg Words/Entry</p>
-                    </div>
-                    
-                    <div class="text-center p-6 bg-white/10 rounded-2xl">
-                        <span class="text-4xl mb-3 block float">📈</span>
-                        <h4 class="font-bold text-2xl text-white capitalize">${data.insights.sentimentTrend || 'stable'}</h4>
-                        <p class="text-white/70 text-sm">Mood Trend</p>
-                    </div>
-                    
-                    <div class="text-center p-6 bg-white/10 rounded-2xl">
-                        <span class="text-4xl mb-3 block float">⏰</span>
-                        <h4 class="font-bold text-2xl text-white">${data.insights.mostActiveHour ? data.insights.mostActiveHour + ':00' : 'N/A'}</h4>
-                        <p class="text-white/70 text-sm">Most Active Hour</p>
-                    </div>
+                <div class="space-y-4">
+                    ${themesHtml}
                 </div>
             </div>
-        ` : ''}
+        </div>`;
+}
 
-        <!-- Weekly Summary -->
+function createAdvancedInsightsSection(insights) {
+    return `
+        <div class="glass rounded-3xl p-8 shadow-xl mb-12">
+            <div class="text-center mb-8">
+                <span class="text-4xl mb-4 block float">🧠</span>
+                <h3 class="text-2xl font-bold text-white mb-2">Advanced Insights</h3>
+                <p class="text-white/70">Deeper patterns in your writing</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="text-center p-6 bg-white/10 rounded-2xl">
+                    <span class="text-4xl mb-3 block float">📝</span>
+                    <h4 class="font-bold text-2xl text-white">${insights.avgWordCount || 0}</h4>
+                    <p class="text-white/70 text-sm">Avg Words/Entry</p>
+                </div>
+                
+                <div class="text-center p-6 bg-white/10 rounded-2xl">
+                    <span class="text-4xl mb-3 block float">📈</span>
+                    <h4 class="font-bold text-2xl text-white capitalize">${insights.sentimentTrend || 'stable'}</h4>
+                    <p class="text-white/70 text-sm">Mood Trend</p>
+                </div>
+                
+                <div class="text-center p-6 bg-white/10 rounded-2xl">
+                    <span class="text-4xl mb-3 block float">⏰</span>
+                    <h4 class="font-bold text-2xl text-white">${insights.mostActiveHour ? insights.mostActiveHour + ':00' : 'N/A'}</h4>
+                    <p class="text-white/70 text-sm">Most Active Hour</p>
+                </div>
+            </div>
+        </div>`;
+}
+
+function createSummarySection(data) {
+    return `
         <div class="glass rounded-3xl p-8 shadow-xl">
             <div class="text-center">
                 <span class="text-4xl mb-4 block float">📈</span>
@@ -662,8 +694,7 @@ function updateInsights(data) {
                     </div>
                 </div>
             </div>
-        </div>
-    `;
+        </div>`;
 }
 
 async function fetchReflection() {
@@ -685,13 +716,9 @@ function updateReflectionUI() {
     const container = document.getElementById('reflect-content');
 
     if (!currentReflectionEntry) {
-        container.innerHTML = `
-            <div class="text-center py-16">
-                <span class="text-8xl mb-6 block float">⏰</span>
-                <h3 class="text-3xl font-bold text-white mb-4">No Past Entries Yet</h3>
-                <p class="text-white/70 text-lg">Start journaling to create memories worth reflecting on!</p>
-            </div>
-        `;
+        const emptyTemplate = getTemplate('no-reflection-entry-template');
+        container.innerHTML = '';
+        container.appendChild(emptyTemplate);
         return;
     }
 
@@ -699,6 +726,7 @@ function updateReflectionUI() {
     const date = new Date(entry.createdAt);
     const prompt = currentReflectionPrompt;
 
+    // Build reflection UI dynamically
     container.innerHTML = `
         <div class="max-w-4xl mx-auto">
             <!-- Past Entry Card -->
@@ -805,20 +833,11 @@ async function addReflection(event, originalEntryId) {
 
 // Toast notification system
 function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `glass rounded-2xl p-4 shadow-lg transform transition-all duration-500 translate-x-full ${type === 'success' ? 'border-l-4 border-green-400' :
-        type === 'error' ? 'border-l-4 border-red-400' :
-            'border-l-4 border-blue-400'
-        }`;
+    const toastTemplate = createToast(message, type);
+    const toastContainer = document.getElementById('toast-container');
 
-    toast.innerHTML = `
-        <div class="flex items-center space-x-3">
-            <span class="text-lg">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
-            <p class="text-white font-medium">${message}</p>
-        </div>
-    `;
-
-    document.getElementById('toast-container').appendChild(toast);
+    toastContainer.appendChild(toastTemplate);
+    const toast = toastContainer.lastElementChild;
 
     // Animate in
     setTimeout(() => {
@@ -836,11 +855,136 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+// Weekly Summary functionality
+async function generateWeeklySummary() {
+    const button = document.getElementById('generate-summary-btn');
+    const content = document.getElementById('weekly-review-content');
+
+    // Show loading state
+    button.textContent = 'Generating...';
+    button.disabled = true;
+    content.innerHTML = `
+        <div class="text-center py-8">
+            <div class="spinner mb-4 mx-auto"></div>
+            <p class="text-white/70">Generating your weekly insights...</p>
+        </div>
+    `;
+
+    try {
+        const response = await apiRequest(`/api/weekly-summary?userId=${USER_ID}`);
+
+        if (response.success) {
+            updateWeeklySummary(response.summary);
+        } else {
+            throw new Error(response.error || 'Failed to generate weekly summary');
+        }
+    } catch (error) {
+        console.error('Failed to generate weekly summary:', error);
+        content.innerHTML = `
+            <div class="text-center py-8">
+                <span class="text-4xl mb-4 block">⚠️</span>
+                <p class="text-white/70">Failed to generate weekly summary</p>
+                <p class="text-white/50 text-sm mt-2">${error.message}</p>
+            </div>
+        `;
+        showToast('Failed to generate weekly summary', 'error');
+    } finally {
+        button.textContent = 'Refresh';
+        button.disabled = false;
+    }
+}
+
+function updateWeeklySummary(summaryResponse) {
+    const content = document.getElementById('weekly-review-content');
+
+    // Handle case where no summary is available or API returned a message
+    if (!summaryResponse || !summaryResponse.summary || summaryResponse.message) {
+        const message = summaryResponse?.message || "No weekly summary available yet";
+        const isNoEntries = message.includes("No entries found") || message.includes("Not enough entries");
+
+        content.innerHTML = `
+            <div class="text-center py-8">
+                <span class="text-4xl mb-4 block">${isNoEntries ? '📝' : '⏰'}</span>
+                <p class="text-white/70">${message}</p>
+                ${isNoEntries ? '<p class="text-white/50 text-sm mt-2">Write more entries to generate insights!</p>' : ''}
+            </div>
+        `;
+        return;
+    }
+
+    const summary = summaryResponse.summary;
+
+    // The backend stores AI content in summary.summary, not summary.content
+    const aiContent = summary.summary || summary.content;
+
+    if (!aiContent) {
+        content.innerHTML = `
+            <div class="text-center py-8">
+                <span class="text-4xl mb-4 block">📝</span>
+                <p class="text-white/70">No weekly summary content available</p>
+                <p class="text-white/50 text-sm mt-2">Try generating a new summary!</p>
+            </div>
+        `;
+        return;
+    }
+
+    content.innerHTML = `
+        <div class="space-y-6">
+            <div class="bg-white/10 rounded-2xl p-6">
+                <h4 class="text-lg font-semibold text-white mb-3">Weekly Reflection</h4>
+                <div class="text-white/90 leading-relaxed">
+                    ${aiContent.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+            
+            ${summary.topThemes && summary.topThemes.length > 0 ? `
+                <div class="bg-white/10 rounded-2xl p-6">
+                    <h4 class="text-lg font-semibold text-white mb-3">Key Themes This Week</h4>
+                    <div class="flex flex-wrap gap-2">
+                        ${summary.topThemes.map(theme => `
+                            <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-medium">
+                                ${themeData[theme]?.emoji || '🌱'} ${theme}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <span class="text-2xl block mb-2">📝</span>
+                    <div class="text-xl font-bold text-white">${summary.entryCount || 0}</div>
+                    <div class="text-white/70 text-sm">Entries</div>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <span class="text-2xl block mb-2">${summary.avgSentiment > 0.1 ? '😊' : summary.avgSentiment < -0.1 ? '😔' : '😐'}</span>
+                    <div class="text-xl font-bold text-white">${Math.round(((summary.avgSentiment || 0) + 1) * 50)}%</div>
+                    <div class="text-white/70 text-sm">Positivity</div>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <span class="text-2xl block mb-2">🎭</span>
+                    <div class="text-xl font-bold text-white">${summary.topThemes?.length || 0}</div>
+                    <div class="text-white/70 text-sm">Themes</div>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <p class="text-white/50 text-xs">
+                    Generated on ${summary.generatedAt ? new Date(summary.generatedAt).toLocaleDateString() : new Date().toLocaleDateString()}
+                </p>
+            </div>
+        </div>
+    `;
+}
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async function () {
     // Load initial data
     await getNewPrompt();
     await fetchEntries();
+
+    // Generate initial weekly summary
+    await generateWeeklySummary();
 
     // Auto-resize textareas
     const textareas = document.querySelectorAll('textarea');

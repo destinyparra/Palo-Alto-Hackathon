@@ -127,50 +127,28 @@
                 </div>
             </div>
 
-
             <!-- Weekly AI Review Section -->
             <div class="mt-12">
-
                 <div id="weekly-review-section" class="glass rounded-3xl p-8 shadow-xl">
-
                     <div class="flex items-center justify-between mb-6">
-
                         <div class="flex items-center">
-
                             <span class="text-3xl mr-3 sparkle">✨</span>
-
                             <h3 class="text-2xl font-bold text-white">Your Week in Review</h3>
-
                         </div>
-
                         <button onclick="generateWeeklySummary()" id="generate-summary-btn"
                             class="text-white/70 hover:text-white text-sm underline">
-
                             Refresh
-
                         </button>
-
                     </div>
-
-
 
                     <div id="weekly-review-content">
-
                         <div class="text-center py-8">
-
                             <div class="spinner mb-4 mx-auto"></div>
-
                             <p class="text-white/70">Generating your weekly insights...</p>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
-
-
 
             <!-- Writing Tips -->
             <div class="mt-12">
@@ -306,290 +284,334 @@
     <div id="toast-container" class="fixed top-20 right-6 z-50 space-y-4"></div>
 
     <!-- Sentiment Edit Modal -->
-
     <div id="sentiment-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
-
         <div class="glass rounded-3xl max-w-md w-full p-6">
-
             <div class="text-center mb-6">
-
                 <h3 class="text-xl font-bold text-white mb-2">How are you feeling about this entry?</h3>
-
                 <p class="text-white/70 text-sm">Choose the emotion that best represents your feelings</p>
-
             </div>
 
-
-
             <div class="space-y-3 mb-6" id="emotion-options">
-
                 <button
                     class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                     data-sentiment="0.8" data-emotion="very_positive">
-
                     <span class="text-3xl">😄</span>
-
                     <span class="text-white font-medium">Very Positive</span>
-
                 </button>
-
                 <button
                     class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                     data-sentiment="0.4" data-emotion="positive">
-
                     <span class="text-3xl">😊</span>
-
                     <span class="text-white font-medium">Positive</span>
-
                 </button>
-
                 <button
                     class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                     data-sentiment="0.0" data-emotion="neutral">
-
                     <span class="text-3xl">😐</span>
-
                     <span class="text-white font-medium">Neutral</span>
-
                 </button>
-
                 <button
                     class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                     data-sentiment="-0.4" data-emotion="negative">
-
                     <span class="text-3xl">😔</span>
-
                     <span class="text-white font-medium">Negative</span>
-
                 </button>
-
                 <button
                     class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                     data-sentiment="-0.8" data-emotion="very_negative">
-
                     <span class="text-3xl">😢</span>
-
                     <span class="text-white font-medium">Very Negative</span>
-
                 </button>
-
             </div>
-
-
 
             <div class="flex space-x-3">
-
                 <button id="close-sentiment-modal"
                     class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors">
-
                     Cancel
-
                 </button>
-
             </div>
-
         </div>
-
     </div>
 
-
-
     <!-- Theme Edit Modal -->
-
     <div id="theme-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
-
         <div class="glass rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-
             <div class="p-6 border-b border-white/20">
-
                 <h3 class="text-xl font-bold text-white mb-2">Edit Themes</h3>
-
                 <p class="text-white/70 text-sm">Select themes that match your entry (max 5)</p>
-
             </div>
 
-
-
             <div class="p-6 overflow-y-auto max-h-[50vh]">
-
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="theme-selection">
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="work">
-
                         <span class="text-2xl">🌳</span>
-
                         <span class="text-white text-sm font-medium capitalize">work</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="family">
-
                         <span class="text-2xl">🌹</span>
-
                         <span class="text-white text-sm font-medium capitalize">family</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="health">
-
                         <span class="text-2xl">🪷</span>
-
                         <span class="text-white text-sm font-medium capitalize">health</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="love">
-
                         <span class="text-2xl">🌸</span>
-
                         <span class="text-white text-sm font-medium capitalize">love</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="friends">
-
                         <span class="text-2xl">🌻</span>
-
                         <span class="text-white text-sm font-medium capitalize">friends</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="stress">
-
                         <span class="text-2xl">🎋</span>
-
                         <span class="text-white text-sm font-medium capitalize">stress</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="happiness">
-
                         <span class="text-2xl">🌼</span>
-
                         <span class="text-white text-sm font-medium capitalize">happiness</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="creativity">
-
                         <span class="text-2xl">🌺</span>
-
                         <span class="text-white text-sm font-medium capitalize">creativity</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="learning">
-
                         <span class="text-2xl">🌿</span>
-
                         <span class="text-white text-sm font-medium capitalize">learning</span>
-
                     </button>
-
                     <button
                         class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
                         data-theme="travel">
-
                         <span class="text-2xl">🌴</span>
-
                         <span class="text-white text-sm font-medium capitalize">travel</span>
-
                     </button>
-
                 </div>
-
-
 
                 <div class="mt-6">
-
                     <h4 class="text-white font-medium mb-2">Selected themes (<span id="theme-count">0</span>/5):</h4>
-
                     <div class="flex flex-wrap gap-2" id="selected-themes">
-
                         <!-- Selected themes will appear here -->
-
                     </div>
-
                 </div>
-
             </div>
-
-
 
             <div class="p-6 border-t border-white/20 flex space-x-3">
-
                 <button id="close-theme-modal"
                     class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors">
-
                     Cancel
-
                 </button>
-
                 <button id="save-themes"
                     class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors">
-
                     Save Themes
-
                 </button>
-
             </div>
-
         </div>
-
     </div>
-
-
 
     <!-- Past Summaries Modal -->
-
     <div id="past-summaries-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
-
         <div class="glass rounded-3xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-
             <div class="p-6 border-b border-white/20">
-
                 <div class="flex justify-between items-center">
-
                     <h3 class="text-2xl font-bold text-white">Past Weekly Summaries</h3>
-
                     <button id="close-past-summaries" class="text-white/70 hover:text-white text-2xl">×</button>
-
                 </div>
-
             </div>
-
-
 
             <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6" id="past-summaries-content">
-
                 <!-- Past summaries will be populated here -->
-
             </div>
-
         </div>
-
     </div>
 
+    <!-- HTML Templates (Hidden) -->
+    <div id="templates" class="hidden">
+        <!-- Entry Card Template -->
+        <template id="entry-card-template">
+            <div class="entry-card rounded-2xl p-6 shadow-lg bloom cursor-pointer select-none">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="entry-date text-sm text-gray-600 font-medium"></span>
+                        <span
+                            class="reflection-badge text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full font-medium hidden">Reflection</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="sentiment-emoji text-2xl"></span>
+                        <span class="confidence-score text-xs text-gray-500"></span>
+                    </div>
+                </div>
+                <div class="original-entry-container"></div>
+                <p class="entry-text text-gray-800 mb-4 leading-relaxed"></p>
+                <div class="themes-container flex flex-wrap gap-2"></div>
+                <div class="entry-metadata mt-2 text-xs text-gray-500"></div>
+            </div>
+        </template>
+
+        <!-- Theme Badge Template -->
+        <template id="theme-badge-template">
+            <span class="theme-badge px-3 py-1 rounded-full text-xs font-semibold text-gray-700">
+                <span class="theme-emoji"></span> <span class="theme-name"></span>
+            </span>
+        </template>
+
+        <!-- Empty State Template -->
+        <template id="empty-entries-template">
+            <div class="text-center py-12">
+                <span class="text-8xl mb-6 block float">🌱</span>
+                <p class="text-white/70 text-lg">No entries yet</p>
+                <p class="text-white/50">Start writing to see your thoughts bloom!</p>
+            </div>
+        </template>
+
+        <!-- Garden Plant Card Template -->
+        <template id="plant-card-template">
+            <div class="plant-card rounded-3xl shadow-2xl p-8 card-hover relative overflow-hidden">
+                <div class="plant-bg absolute inset-0 opacity-10"></div>
+
+                <div class="text-center mb-6 relative z-10">
+                    <div class="text-6xl mb-4 float relative plant-emoji-container">
+                        <span class="plant-emoji"></span>
+                        <div class="sparkle-indicator absolute -top-2 -right-2 text-yellow-400 text-lg sparkle hidden">✨
+                        </div>
+                    </div>
+                    <h3 class="plant-name text-2xl font-bold text-gray-800 mb-2"></h3>
+                    <p class="plant-theme text-gray-600 text-sm capitalize"></p>
+                </div>
+
+                <div class="mb-6 relative z-10">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="plant-stage text-sm font-semibold text-gray-700 capitalize"></span>
+                        <span class="plant-count text-sm text-gray-500"></span>
+                    </div>
+
+                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="plant-progress h-full rounded-full transition-all duration-1000 ease-out"></div>
+                    </div>
+                </div>
+
+                <div class="text-center relative z-10">
+                    <span
+                        class="plant-badge inline-block bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold border border-gray-200"></span>
+                </div>
+
+                <div class="plant-next-stage mt-4 text-center text-xs text-gray-500 relative z-10 hidden"></div>
+            </div>
+        </template>
+
+        <!-- Empty Garden Template -->
+        <template id="empty-garden-template">
+            <div class="col-span-full text-center py-16">
+                <span class="text-8xl mb-6 block float">🏡</span>
+                <h3 class="text-3xl font-bold text-white mb-4">Your Garden Awaits</h3>
+                <p class="text-white/70 text-lg mb-8">Start journaling to plant your first seeds!</p>
+                <button onclick="showSection('journal')"
+                    class="bg-gradient-to-r from-green-500 to-blue-500 text-white px-8 py-4 rounded-xl font-bold hover:from-green-600 hover:to-blue-600 transition-all transform hover:scale-105 shadow-xl">
+                    🌱 Plant Your First Seed
+                </button>
+            </div>
+        </template>
+
+        <!-- Garden Stat Template -->
+        <template id="garden-stat-template">
+            <div class="text-center p-6 bg-white/20 rounded-xl shadow-sm">
+                <span class="stat-emoji text-4xl mb-3 block float"></span>
+                <h4 class="stat-value font-bold text-2xl text-white"></h4>
+                <p class="stat-label text-white/70 text-sm"></p>
+            </div>
+        </template>
+
+        <!-- Reflection Card Template -->
+        <template id="reflection-card-template">
+            <div class="glass rounded-3xl shadow-2xl p-8 card-hover">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-3xl float">💭</span>
+                        <div>
+                            <h3 class="reflection-date text-xl font-bold text-white"></h3>
+                            <p class="original-date text-sm text-white/70"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
+                        <span class="reflection-sentiment text-2xl"></span>
+                    </div>
+                </div>
+
+                <div class="original-entry-section mb-6 p-4 bg-white/10 rounded-2xl border-l-4 border-white/30 hidden">
+                    <p class="text-sm text-white/70 mb-2">Original Entry:</p>
+                    <p class="original-entry-text text-white/90 italic"></p>
+                </div>
+
+                <div class="mb-4">
+                    <p class="reflection-text text-white leading-relaxed"></p>
+                </div>
+
+                <div class="reflection-themes flex flex-wrap gap-2"></div>
+            </div>
+        </template>
+
+        <!-- Empty Reflections Template -->
+        <template id="empty-reflections-template">
+            <div class="text-center py-16">
+                <span class="text-8xl mb-6 block float">💎</span>
+                <h3 class="text-3xl font-bold text-white mb-4">No Reflections Yet</h3>
+                <p class="text-white/70 text-lg mb-8">Start reflecting on your past entries to build your collection of
+                    insights!</p>
+                <button onclick="showSection('reflect')"
+                    class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105 shadow-xl">
+                    ✨ Start Reflecting
+                </button>
+            </div>
+        </template>
+
+        <!-- Toast Template -->
+        <template id="toast-template">
+            <div class="glass rounded-2xl p-4 shadow-lg transform transition-all duration-500 translate-x-full">
+                <div class="flex items-center space-x-3">
+                    <span class="toast-icon text-lg"></span>
+                    <p class="toast-message text-white font-medium"></p>
+                </div>
+            </div>
+        </template>
+
+        <!-- Insight Empty State Template -->
+        <template id="empty-insights-template">
+            <div class="text-center py-16">
+                <span class="text-8xl mb-6 block float">💎</span>
+                <h3 class="text-3xl font-bold text-white mb-4">Insights Await Discovery</h3>
+                <p class="text-white/70 text-lg">Write more entries to unlock insights about your emotional patterns and
+                    themes!</p>
+            </div>
+        </template>
+
+        <!-- No Reflection Entry Template -->
+        <template id="no-reflection-entry-template">
+            <div class="text-center py-16">
+                <span class="text-8xl mb-6 block float">⏰</span>
+                <h3 class="text-3xl font-bold text-white mb-4">No Past Entries Yet</h3>
+                <p class="text-white/70 text-lg">Start journaling to create memories worth reflecting on!</p>
+            </div>
+        </template>
+    </div>
 
     <!-- External JavaScript -->
     <script src="/static/js/script.js"></script>
