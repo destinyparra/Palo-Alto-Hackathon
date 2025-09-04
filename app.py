@@ -221,19 +221,33 @@ def create_entry():
 # Fetching journal entries
 @app.route("/api/entries", methods=["GET"])
 def get_entries():
-    user_id = request.args.get("userId", "default_user")
-    items = list(
-        mongo.db.entries.find({"userId": user_id})
-        .sort("createdAt", -1)
-        .limit(50)
-    )
-    
-    for item in items:
-        item["_id"] = str(item["_id"])
-        created = item.get("createdAt")
-        if hasattr(created, "isoformat"):
-            item["createdAt"] = item["createdAt"].isoformat()
-    return jsonify(items), 200
+    try:
+        user_id = request.args.get("userId", "default_user")
+        limit = min(int(request.args.get("limit", 50)), 100)  # max 100
+        skip = int(request.args.get("skip", 0))
+
+        items = list(
+            mongo.db.entries.find({"userId": user_id})
+            .sort("createdAt", -1)
+            .skip(skip)
+            .limit(50)
+        )
+        
+        # format dates
+        for item in items:
+            item["_id"] = str(item["_id"])
+            if hasattr(item.get("createdAt"), "isoformat"):
+                item["createdAt"] = item["createdAt"].isoformat()
+
+        return jsonify({
+            "success": True,
+            "entries": items,
+            "count": len(items),
+            "hasMore": len(items) == limit
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching entries: {str(e)}")
+        return jsonify({"error": "Failed to fetch entries"}), 500
 
 
 @app.route("/api/insights", methods=["GET"])
