@@ -257,7 +257,7 @@ def get_entries():
             mongo.db.entries.find({"userId": user_id})
             .sort("createdAt", -1)
             .skip(skip)
-            .limit(50)
+            .limit(limit)
         )
         
         # format dates
