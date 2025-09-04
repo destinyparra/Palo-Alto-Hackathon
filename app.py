@@ -58,6 +58,8 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max payload
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    DEV_MODE = os.getenv('DEV_MODE', 'False').lower() == 'true'  
+
 
 app.config.from_object(Config)
 
@@ -593,22 +595,23 @@ def get_weekly_summary():
             }), 200
         
         # check if a summary already exists (within last 24 hrs to prevent overuse)
-        recent_summary = mongo.db.weekly_summaries.find_one({
-            "userId": user_id,
-            "generatedAt": {"$gte": end_date - timedelta(hours=24)}
-        })
+        if not app.config.get('DEV_MODE', False): 
+            recent_summary = mongo.db.weekly_summaries.find_one({
+                "userId": user_id,
+                "generatedAt": {"$gte": end_date - timedelta(hours=24)}
+            })
 
-        if recent_summary:
-            if hasattr(recent_summary.get("generatedAt"), "isoformat"):
-                recent_summary["generatedAt"] = recent_summary["generatedAt"].isoformat()
-            if hasattr(recent_summary.get("weekStart"), "isoformat"):
-                recent_summary["weekStart"] = recent_summary["weekStart"].isoformat()
-            if hasattr(recent_summary.get("weekEnd"), "isoformat"):
-                recent_summary["weekEnd"] = recent_summary["weekEnd"].isoformat()
-            return jsonify({
-                "success": True,
-                "summary": recent_summary
-            }), 200
+            if recent_summary:
+                if hasattr(recent_summary.get("generatedAt"), "isoformat"):
+                    recent_summary["generatedAt"] = recent_summary["generatedAt"].isoformat()
+                if hasattr(recent_summary.get("weekStart"), "isoformat"):
+                    recent_summary["weekStart"] = recent_summary["weekStart"].isoformat()
+                if hasattr(recent_summary.get("weekEnd"), "isoformat"):
+                    recent_summary["weekEnd"] = recent_summary["weekEnd"].isoformat()
+                return jsonify({
+                    "success": True,
+                    "summary": recent_summary
+                }), 200
         
         # Prepare the data for AI analysis
         entry_texts = []
