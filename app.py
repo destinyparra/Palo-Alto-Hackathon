@@ -11,6 +11,11 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from textblob import TextBlob
 import re
 
+# dev testing
+from flask import send_from_directory
+from flask import redirect, url_for
+
+
 
 
 # Read environment variables from .env file
@@ -42,6 +47,18 @@ mongo = PyMongo(app)
 @app.route('/healthz')
 def health():
     return jsonify({"ok": True})
+
+# Dev route
+@app.route('/dev')
+def dev():
+    return send_from_directory('static', 'dev.html')
+
+# 404 on '/' redirects to /dev
+@app.route('/')
+def root():
+    return redirect(url_for('dev'))
+ 
+
 
 # Creating journal entry (text only for now)
 @app.route("/api/entries", methods=["POST"])
