@@ -23,7 +23,7 @@ import random
 
 # openai for weekly summary
 import openai
-import json
+
 
 """
 Endpoints:
@@ -140,6 +140,8 @@ WRITING_PROMPTS = [
     "What small victory can you celebrate today?",
     "How are you taking care of yourself?"
 ]
+
+
 
 # Validation 
 def validate_user_input(data):

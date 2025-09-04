@@ -1,7 +1,7 @@
 // Configuration
 const API_BASE_URL = window.location.origin; // Flask 
-// const USER_ID = 'default_user';
-const USER_ID = 'Destiny_Test'; // For testing purposes
+const USER_ID = 'default_user';
+// const USER_ID = 'Destiny_Test'; // For testing purposes
 
 
 // State management
@@ -896,87 +896,121 @@ async function generateWeeklySummary() {
     }
 }
 
-function updateWeeklySummary(summaryResponse) {
+// function updateWeeklySummary(summaryResponse) {
+//     const content = document.getElementById('weekly-review-content');
+
+//     // Handle case where no summary is available or API returned a message
+//     if (!summaryResponse || !summaryResponse.summary || summaryResponse.message) {
+//         const message = summaryResponse?.message || "No weekly summary available yet";
+//         const isNoEntries = message.includes("No entries found") || message.includes("Not enough entries");
+
+//         content.innerHTML = `
+//             <div class="text-center py-8">
+//                 <span class="text-4xl mb-4 block">${isNoEntries ? '📝' : '⏰'}</span>
+//                 <p class="text-white/70">${message}</p>
+//                 ${isNoEntries ? '<p class="text-white/50 text-sm mt-2">Write more entries to generate insights!</p>' : ''}
+//             </div>
+//         `;
+//         return;
+//     }
+
+//     const summary = summaryResponse.summary;
+
+//     // The backend stores AI content in summary.summary, not summary.content
+//     const aiContent = summary.summary || summary.content;
+
+//     if (!aiContent) {
+//         content.innerHTML = `
+//             <div class="text-center py-8">
+//                 <span class="text-4xl mb-4 block">📝</span>
+//                 <p class="text-white/70">No weekly summary content available</p>
+//                 <p class="text-white/50 text-sm mt-2">Try generating a new summary!</p>
+//             </div>
+//         `;
+//         return;
+//     }
+
+//     content.innerHTML = `
+//         <div class="space-y-6">
+//             <div class="bg-white/10 rounded-2xl p-6">
+//                 <h4 class="text-lg font-semibold text-white mb-3">Weekly Reflection</h4>
+//                 <div class="text-white/90 leading-relaxed">
+//                     ${aiContent.replace(/\n/g, '<br>')}
+//                 </div>
+//             </div>
+
+//             ${summary.topThemes && summary.topThemes.length > 0 ? `
+//                 <div class="bg-white/10 rounded-2xl p-6">
+//                     <h4 class="text-lg font-semibold text-white mb-3">Key Themes This Week</h4>
+//                     <div class="flex flex-wrap gap-2">
+//                         ${summary.topThemes.map(theme => `
+//                             <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-medium">
+//                                 ${themeData[theme]?.emoji || '🌱'} ${theme}
+//                             </span>
+//                         `).join('')}
+//                     </div>
+//                 </div>
+//             ` : ''}
+
+//             <div class="grid md:grid-cols-3 gap-4">
+//                 <div class="bg-white/10 rounded-xl p-4 text-center">
+//                     <span class="text-2xl block mb-2">📝</span>
+//                     <div class="text-xl font-bold text-white">${summary.entryCount || 0}</div>
+//                     <div class="text-white/70 text-sm">Entries</div>
+//                 </div>
+//                 <div class="bg-white/10 rounded-xl p-4 text-center">
+//                     <span class="text-2xl block mb-2">${summary.avgSentiment > 0.1 ? '😊' : summary.avgSentiment < -0.1 ? '😔' : '😐'}</span>
+//                     <div class="text-xl font-bold text-white">${Math.round(((summary.avgSentiment || 0) + 1) * 50)}%</div>
+//                     <div class="text-white/70 text-sm">Positivity</div>
+//                 </div>
+//                 <div class="bg-white/10 rounded-xl p-4 text-center">
+//                     <span class="text-2xl block mb-2">🎭</span>
+//                     <div class="text-xl font-bold text-white">${summary.topThemes?.length || 0}</div>
+//                     <div class="text-white/70 text-sm">Themes</div>
+//                 </div>
+//             </div>
+
+//             <div class="text-center">
+//                 <p class="text-white/50 text-xs">
+//                     Generated on ${summary.generatedAt ? new Date(summary.generatedAt).toLocaleDateString() : new Date().toLocaleDateString()}
+//                 </p>
+//             </div>
+//         </div>
+//     `;
+// }
+function updateWeeklySummary(summary) {
     const content = document.getElementById('weekly-review-content');
 
-    // Handle case where no summary is available or API returned a message
-    if (!summaryResponse || !summaryResponse.summary || summaryResponse.message) {
-        const message = summaryResponse?.message || "No weekly summary available yet";
-        const isNoEntries = message.includes("No entries found") || message.includes("Not enough entries");
+    // Allow both shapes:
+    const text =
+        summary && typeof summary === 'object'
+            ? (summary.content || summary.summary) // support backend string field
+            : null;
 
+    if (!text) {
         content.innerHTML = `
-            <div class="text-center py-8">
-                <span class="text-4xl mb-4 block">${isNoEntries ? '📝' : '⏰'}</span>
-                <p class="text-white/70">${message}</p>
-                ${isNoEntries ? '<p class="text-white/50 text-sm mt-2">Write more entries to generate insights!</p>' : ''}
-            </div>
-        `;
-        return;
-    }
-
-    const summary = summaryResponse.summary;
-
-    // The backend stores AI content in summary.summary, not summary.content
-    const aiContent = summary.summary || summary.content;
-
-    if (!aiContent) {
-        content.innerHTML = `
-            <div class="text-center py-8">
-                <span class="text-4xl mb-4 block">📝</span>
-                <p class="text-white/70">No weekly summary content available</p>
-                <p class="text-white/50 text-sm mt-2">Try generating a new summary!</p>
-            </div>
-        `;
+      <div class="text-center py-8">
+        <span class="text-4xl mb-4 block">📝</span>
+        <p class="text-white/70">No weekly summary available yet</p>
+        <p class="text-white/50 text-sm mt-2">Write more entries to generate insights!</p>
+      </div>`;
         return;
     }
 
     content.innerHTML = `
-        <div class="space-y-6">
-            <div class="bg-white/10 rounded-2xl p-6">
-                <h4 class="text-lg font-semibold text-white mb-3">Weekly Reflection</h4>
-                <div class="text-white/90 leading-relaxed">
-                    ${aiContent.replace(/\n/g, '<br>')}
-                </div>
-            </div>
-            
-            ${summary.topThemes && summary.topThemes.length > 0 ? `
-                <div class="bg-white/10 rounded-2xl p-6">
-                    <h4 class="text-lg font-semibold text-white mb-3">Key Themes This Week</h4>
-                    <div class="flex flex-wrap gap-2">
-                        ${summary.topThemes.map(theme => `
-                            <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm font-medium">
-                                ${themeData[theme]?.emoji || '🌱'} ${theme}
-                            </span>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : ''}
-            
-            <div class="grid md:grid-cols-3 gap-4">
-                <div class="bg-white/10 rounded-xl p-4 text-center">
-                    <span class="text-2xl block mb-2">📝</span>
-                    <div class="text-xl font-bold text-white">${summary.entryCount || 0}</div>
-                    <div class="text-white/70 text-sm">Entries</div>
-                </div>
-                <div class="bg-white/10 rounded-xl p-4 text-center">
-                    <span class="text-2xl block mb-2">${summary.avgSentiment > 0.1 ? '😊' : summary.avgSentiment < -0.1 ? '😔' : '😐'}</span>
-                    <div class="text-xl font-bold text-white">${Math.round(((summary.avgSentiment || 0) + 1) * 50)}%</div>
-                    <div class="text-white/70 text-sm">Positivity</div>
-                </div>
-                <div class="bg-white/10 rounded-xl p-4 text-center">
-                    <span class="text-2xl block mb-2">🎭</span>
-                    <div class="text-xl font-bold text-white">${summary.topThemes?.length || 0}</div>
-                    <div class="text-white/70 text-sm">Themes</div>
-                </div>
-            </div>
-            
-            <div class="text-center">
-                <p class="text-white/50 text-xs">
-                    Generated on ${summary.generatedAt ? new Date(summary.generatedAt).toLocaleDateString() : new Date().toLocaleDateString()}
-                </p>
-            </div>
+    <div class="space-y-6">
+      <div class="bg-white/10 rounded-2xl p-6">
+        <h4 class="text-lg font-semibold text-white mb-3">Weekly Highlights</h4>
+        <div class="text-white/90 leading-relaxed">
+          ${text.replace(/\n/g, '<br>')}
         </div>
-    `;
+      </div>
+      <div class="text-center">
+        <p class="text-white/50 text-xs">
+          Generated on ${new Date().toLocaleDateString()}
+        </p>
+      </div>
+    </div>`;
 }
 
 // Initialize the app
