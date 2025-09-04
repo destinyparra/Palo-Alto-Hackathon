@@ -305,6 +305,292 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="fixed top-20 right-6 z-50 space-y-4"></div>
 
+    <!-- Sentiment Edit Modal -->
+
+    <div id="sentiment-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
+
+        <div class="glass rounded-3xl max-w-md w-full p-6">
+
+            <div class="text-center mb-6">
+
+                <h3 class="text-xl font-bold text-white mb-2">How are you feeling about this entry?</h3>
+
+                <p class="text-white/70 text-sm">Choose the emotion that best represents your feelings</p>
+
+            </div>
+
+
+
+            <div class="space-y-3 mb-6" id="emotion-options">
+
+                <button
+                    class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                    data-sentiment="0.8" data-emotion="very_positive">
+
+                    <span class="text-3xl">😄</span>
+
+                    <span class="text-white font-medium">Very Positive</span>
+
+                </button>
+
+                <button
+                    class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                    data-sentiment="0.4" data-emotion="positive">
+
+                    <span class="text-3xl">😊</span>
+
+                    <span class="text-white font-medium">Positive</span>
+
+                </button>
+
+                <button
+                    class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                    data-sentiment="0.0" data-emotion="neutral">
+
+                    <span class="text-3xl">😐</span>
+
+                    <span class="text-white font-medium">Neutral</span>
+
+                </button>
+
+                <button
+                    class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                    data-sentiment="-0.4" data-emotion="negative">
+
+                    <span class="text-3xl">😔</span>
+
+                    <span class="text-white font-medium">Negative</span>
+
+                </button>
+
+                <button
+                    class="emotion-option w-full flex items-center space-x-4 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                    data-sentiment="-0.8" data-emotion="very_negative">
+
+                    <span class="text-3xl">😢</span>
+
+                    <span class="text-white font-medium">Very Negative</span>
+
+                </button>
+
+            </div>
+
+
+
+            <div class="flex space-x-3">
+
+                <button id="close-sentiment-modal"
+                    class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors">
+
+                    Cancel
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Theme Edit Modal -->
+
+    <div id="theme-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
+
+        <div class="glass rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+
+            <div class="p-6 border-b border-white/20">
+
+                <h3 class="text-xl font-bold text-white mb-2">Edit Themes</h3>
+
+                <p class="text-white/70 text-sm">Select themes that match your entry (max 5)</p>
+
+            </div>
+
+
+
+            <div class="p-6 overflow-y-auto max-h-[50vh]">
+
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="theme-selection">
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="work">
+
+                        <span class="text-2xl">🌳</span>
+
+                        <span class="text-white text-sm font-medium capitalize">work</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="family">
+
+                        <span class="text-2xl">🌹</span>
+
+                        <span class="text-white text-sm font-medium capitalize">family</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="health">
+
+                        <span class="text-2xl">🪷</span>
+
+                        <span class="text-white text-sm font-medium capitalize">health</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="love">
+
+                        <span class="text-2xl">🌸</span>
+
+                        <span class="text-white text-sm font-medium capitalize">love</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="friends">
+
+                        <span class="text-2xl">🌻</span>
+
+                        <span class="text-white text-sm font-medium capitalize">friends</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="stress">
+
+                        <span class="text-2xl">🎋</span>
+
+                        <span class="text-white text-sm font-medium capitalize">stress</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="happiness">
+
+                        <span class="text-2xl">🌼</span>
+
+                        <span class="text-white text-sm font-medium capitalize">happiness</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="creativity">
+
+                        <span class="text-2xl">🌺</span>
+
+                        <span class="text-white text-sm font-medium capitalize">creativity</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="learning">
+
+                        <span class="text-2xl">🌿</span>
+
+                        <span class="text-white text-sm font-medium capitalize">learning</span>
+
+                    </button>
+
+                    <button
+                        class="theme-option flex items-center space-x-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                        data-theme="travel">
+
+                        <span class="text-2xl">🌴</span>
+
+                        <span class="text-white text-sm font-medium capitalize">travel</span>
+
+                    </button>
+
+                </div>
+
+
+
+                <div class="mt-6">
+
+                    <h4 class="text-white font-medium mb-2">Selected themes (<span id="theme-count">0</span>/5):</h4>
+
+                    <div class="flex flex-wrap gap-2" id="selected-themes">
+
+                        <!-- Selected themes will appear here -->
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="p-6 border-t border-white/20 flex space-x-3">
+
+                <button id="close-theme-modal"
+                    class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors">
+
+                    Cancel
+
+                </button>
+
+                <button id="save-themes"
+                    class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors">
+
+                    Save Themes
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Past Summaries Modal -->
+
+    <div id="past-summaries-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
+
+        <div class="glass rounded-3xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+
+            <div class="p-6 border-b border-white/20">
+
+                <div class="flex justify-between items-center">
+
+                    <h3 class="text-2xl font-bold text-white">Past Weekly Summaries</h3>
+
+                    <button id="close-past-summaries" class="text-white/70 hover:text-white text-2xl">×</button>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6" id="past-summaries-content">
+
+                <!-- Past summaries will be populated here -->
+
+            </div>
+
+        </div>
+
+    </div>
+
+
     <!-- External JavaScript -->
     <script src="/static/js/script.js"></script>
 </body>
