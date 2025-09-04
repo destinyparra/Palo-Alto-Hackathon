@@ -33,12 +33,39 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-app.config['MONGO_URI'] = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/Palo-Alto-Hackathon')
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'change-me')
+class Config:
+    DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/Palo-Alto-Hackathon')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max payload
+app.config.from_object(Config)
 
 # Initialize 
 mongo = PyMongo(app)
 vader = SentimentIntensityAnalyzer()
+
+def setup_database():
+    try:
+        # create indexes -> better query performance
+        db = mongo.db
+
+        # index on userId and createdAt for entries
+        db.entries.create_index([("userId", 1), ("createdAt", -1)])
+        
+        # index on themes for garden aggregation
+        db.entries.create_index([("themes", 1)])
+        
+        # index on sentiment for analytics
+        db.entries.create_index([("sentiment", 1)])
+        
+        # compound index for insights queries
+        db.entries.create_index([("userId", 1), ("createdAt", -1), ("sentiment", 1)])
+        
+        logger.info("Database indexes created successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error setting up database: {str(e)}")
+        return False
 
 # Theme Categories
 THEME_CATEGORIES = {
@@ -481,4 +508,5 @@ def extract_themes(text: str):
         return []
 
 if __name__ == '__main__':
+    setup_database()
     app.run(debug=True, port=5000)
