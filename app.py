@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_pymongo import PyMongo
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from collections import Counter
 import os
@@ -446,7 +446,7 @@ def get_garden():
         return jsonify({"error": "Failed to fetch garden"}), 500
     
     
-# Update the existing reflection endpoint to support exclusions
+# Reflection endpoint
 @app.route("/api/reflect", methods=["GET"])
 def get_reflection():
     try:
@@ -509,7 +509,7 @@ def get_reflection():
         logger.error(f"Error fetching reflection entries: {str(e)}")
         return jsonify({"error": "Failed to fetch reflection entries"}), 500
     
-# get relfections for a user
+# get all relfections for a user
 @app.route("/api/reflections", methods=["GET"])
 def get_reflections():
     try:
@@ -557,13 +557,13 @@ def get_reflections():
         return jsonify({"error": "Failed to fetch reflections"}), 500
 
 
-# Weekly OpenAI summary generation endpoint
+# Weekly AI summary generation endpoint
 @app.route("/api/weekly-summary", methods=["GET"])
-def generate_weekly_summary():
+def get_weekly_summary():
     try:
         user_id = request.args.get("userId", "default_user")
 
-        # check if openai key is configured
+        # check if openai is configured
         if not app.config['OPENAI_API_KEY']:
             return jsonify({
                 "success": False,
@@ -612,7 +612,7 @@ def generate_weekly_summary():
                 "summary": recent_summary
             }), 200
         
-        # Prepare the data for OpenAI
+        # Prepare the data for AI analysis
         entry_texts = []
         themes_list = []
         sentiments = []
@@ -628,8 +628,8 @@ def generate_weekly_summary():
         most_common_themes = []
         if themes_list:
             theme_counts = Counter(themes_list)
-            most_common_themes = [theme for theme, count in theme_counts.most_common(3) ]
-        # Counter(themes_list).most_common(3)
+            most_common_themes = [theme for theme, count in theme_counts.most_common(3)]
+
 
         # generate AI Summary
         ai_summary = generate_weekly_summary(entry_texts, most_common_themes, avg_sentiment, len(entries))
@@ -637,7 +637,7 @@ def generate_weekly_summary():
         if not ai_summary:
             return jsonify({
                 "success": False,
-                "error": "Failed to generate summary from OpenAI."
+                "error": "Failed to generate AI summary."
             }), 500
         
         # Save summary to DB
@@ -645,7 +645,7 @@ def generate_weekly_summary():
             "userId": user_id,
             "weekStart": start_date,
             "weekEnd": end_date,
-            "generatedAiAt": datetime.utcnow(),
+            "generatedAt": datetime.now(timezone.utc),
             "summary": ai_summary,
             "entryCount": len(entries),
             "avgSentiment": avg_sentiment,
@@ -657,7 +657,7 @@ def generate_weekly_summary():
         summary_doc["_id"] = str(result.inserted_id)
         summary_doc["weekStart"] = summary_doc["weekStart"].isoformat()
         summary_doc["weekEnd"] = summary_doc["weekEnd"].isoformat()
-        summary_doc["generatedAiAt"] = summary_doc["generatedAiAt"].isoformat()
+        summary_doc["generatedAt"] = summary_doc["generatedAt"].isoformat()
 
         return jsonify({
             "success": True,
@@ -669,7 +669,7 @@ def generate_weekly_summary():
         return jsonify({"error": "Failed to generate weekly summary"}), 500
 
 
-# get past weekly summaries
+# Endpoint to get past weekly summaries
 @app.route("/api/weekly-summaries", methods=["GET"])
 def get_past_weekly_summaries():
     try:
@@ -679,7 +679,7 @@ def get_past_weekly_summaries():
         
         summaries = list(
             mongo.db.weekly_summaries.find({"userId": user_id})
-            .sort("generatedAiAt", -1)
+            .sort("generatedAt", -1)
             .skip(skip)
             .limit(limit)
         )
@@ -687,12 +687,13 @@ def get_past_weekly_summaries():
         # format dates
         for summary in summaries:
             summary["_id"] = str(summary["_id"])
+            if hasattr(summary.get("generatedAt"), "isoformat"):
+                summary["generatedAt"] = summary["generatedAt"].isoformat()
             if hasattr(summary.get("weekStart"), "isoformat"):
                 summary["weekStart"] = summary["weekStart"].isoformat()
             if hasattr(summary.get("weekEnd"), "isoformat"):
                 summary["weekEnd"] = summary["weekEnd"].isoformat()
-            if hasattr(summary.get("generatedAt"), "isoformat"):
-                summary["generatedAt"] = summary["generatedAt"].isoformat()
+
         
         return jsonify({
             "success": True,
