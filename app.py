@@ -5,6 +5,9 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from collections import Counter
 import os
+import logging
+import traceback
+
 
 # analysis helpers
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -12,8 +15,8 @@ from textblob import TextBlob
 import re
 
 # dev testing
-from flask import send_from_directory
-from flask import redirect, url_for
+from flask import send_from_directory, redirect, url_for
+
 
 
 
@@ -21,17 +24,11 @@ from flask import redirect, url_for
 # Read environment variables from .env file
 load_dotenv()
 
-# Sentiment Analysis Endpoint
-vader = SentimentIntensityAnalyzer()
+# Logging setup for debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-THEME_CATEGORIES = {
-    "work": ["work","job","boss","project","meeting","deadline","office"],
-    "health": ["health","run","gym","workout","sleep","tired","doctor"],
-    "friends": ["friend","hang","party","buddy","social"],
-    "family": ["family","mom","dad","parent","kids","home","sibling"],
-    "stress": ["stress","overwhelmed","anxious","worry","pressure"],
-    "happiness": ["happy","joy","excited","grateful","smile","laugh"]
-}
+
 
 app = Flask(__name__)
 CORS(app)
@@ -39,8 +36,93 @@ CORS(app)
 app.config['MONGO_URI'] = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/Palo-Alto-Hackathon')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'change-me')
 
-# DB setup
+# Initialize 
 mongo = PyMongo(app)
+vader = SentimentIntensityAnalyzer()
+
+# Theme Categories
+THEME_CATEGORIES = {
+    "work": ["work", "job", "boss", "project", "meeting", "deadline", "office", "colleague", 
+             "career", "professional", "business", "client", "salary", "promotion", "corporate"],
+    "health": ["health", "run", "gym", "workout", "sleep", "tired", "doctor", "exercise", 
+               "fitness", "nutrition", "wellness", "medical", "therapy", "healing"],
+    "friends": ["friend", "hang", "party", "buddy", "social", "chat", "call", "text", 
+                "friendship", "companion", "peer", "acquaintance"],
+    "family": ["family", "mom", "dad", "parent", "kids", "home", "sibling", "mother", 
+               "father", "child", "son", "daughter", "relatives", "grandparent"],
+    "stress": ["stress", "overwhelmed", "anxious", "worry", "pressure", "tension", 
+               "burnout", "exhausted", "frustrated", "struggle"],
+    "happiness": ["happy", "joy", "excited", "grateful", "smile", "laugh", "celebrate", 
+                  "wonderful", "amazing", "blessed", "content", "cheerful"],
+    "love": ["love", "relationship", "romance", "dating", "partner", "boyfriend", 
+             "girlfriend", "heart", "affection", "intimate"],
+    "creativity": ["creative", "art", "music", "write", "design", "paint", "draw", 
+                   "inspiration", "artistic", "imagination"],
+    "learning": ["learn", "study", "read", "book", "education", "knowledge", "skill", 
+                 "course", "research", "discovery"],
+    "travel": ["travel", "trip", "vacation", "explore", "journey", "adventure", 
+               "destination", "flight", "hotel"]
+}
+
+# Journal Prompts - for inspiration 
+# Future enhancement: serve random prompt via API
+WRITING_PROMPTS = [
+    "What are three things that went well today?",
+    "What made you smile recently?",
+    "Describe a good conversation you had.",
+    "What is something new you learned?",
+    "What good deed did you do for someone else?",
+    "What is a long-term goal you are working towards?",
+    "What is a recent accomplishment you are proud of?",
+    "What challenged you recently, and how did you handle it?",
+    "Describe a moment when you felt truly present.",
+    "What are you grateful for right now?",
+    "How have you grown in the past week?",
+    "What would you tell your past self about today?",
+    "What patterns do you notice in your thoughts lately?",
+    "Describe someone who made your day better.",
+    "What small victory can you celebrate today?",
+    "How are you taking care of yourself?"
+]
+
+# Validation 
+def validate_user_input(data):
+    errors = []
+
+    if not isinstance(data, dict):
+        errors.append("Invalid data format.")
+        return errors, {}
+    
+    # validate text
+    text = data.get("text", "").strip()
+    if not text:
+        errors.append("Text is required.")
+    elif len(text) < 3:
+        errors.append("Text is too short, must exceed 3 characters.")
+    elif len(text) > 10000:
+        errors.append("Text is too long, must be under 10,000 characters.")
+    
+    # validate userId
+    user_id = data.get("userId", "default_user").strip()
+    if len(user_id) > 100:
+        errors.append("userId is too long, must be under 100 characters.")
+
+    # Sanitize text basic XSS protection - might change later to smth stronger than just regex stripping
+    text = re.sub(r'<[^>]+>', '', text)  # Remove HTML tags
+    
+    return errors, {"text": text, "userId": user_id}
+
+
+# Error Handlers
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({"error": "Bad Request", "message": str(error)}), 400
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal server error: {error}")
+    return jsonify({"error": "Internal Server Error"}), 500
+
 
 
 # Health Check
