@@ -18,6 +18,9 @@ import re
 # dev testing
 from flask import send_from_directory, redirect, url_for
 
+# for random entry
+import random
+
 """
 Endpoints:
 GET  /api/prompt          // Random writing prompts
@@ -415,8 +418,54 @@ def get_garden():
         return jsonify({"error": "Failed to fetch garden"}), 500
 
 # Reflection endpoint
-# @app.route("/api/reflect", methods=["GET"])
-# def get_reflection():
+@app.route("/api/reflect", methods=["GET"])
+def get_reflection():
+    try:
+        user_id = request.args.get("userId", "default_user")
+
+        # Only get entries older than one day old for reflections
+        # one_day_ago = datetime.utcnow() - timedelta(days=1)
+
+        # dev test to allow same-day reflections
+        one_day_ago = datetime.utcnow() - timedelta(hours=1)
+
+        old_entries = list(mongo.db.entries.find({
+            "userId": user_id,
+            "createdAt": {"$lte": one_day_ago},
+            "isReflection": {"$ne": True}  # exclude past reflections
+        }).limit(20)) 
+        
+        # if perfomance is an issue: limit to last 20 for performance
+        # .sort("createdAt", -1).limit(20))
+
+        if not old_entries:
+            return jsonify({
+                "success": True,
+                "entry": None,
+                "message": "No entries old enough for reflection yet."
+            }), 200
+        
+        selected_entry = random.choice(old_entries)
+        selected_entry["_id"] = str(selected_entry["_id"])
+        if hasattr(selected_entry.get("createdAt"), "isoformat"):
+            selected_entry["createdAt"] = selected_entry["createdAt"].isoformat()
+        
+        return jsonify({  
+            "success": True,
+            "entry": selected_entry,
+            "prompt": random.choice([
+                "How do you feel reading this entry now?",
+                "What has changed since you wrote this?",
+                "What would you tell the person who wrote this?",
+                "What patterns do you notice in your growth?",
+                "How might you approach this situation differently now?"
+            ])
+        }), 200
+
+    
+    except Exception as e:
+        logger.error(f"Error fetching reflection entries: {str(e)}")
+        return jsonify({"error": "Failed to fetch reflection entries"}), 500
 
 
 
