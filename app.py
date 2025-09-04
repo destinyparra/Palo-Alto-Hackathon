@@ -96,7 +96,7 @@ def get_insights():
     end_date = datetime.utcnow()
     start_date = end_date - (timedelta(days=7) if period == "weekly" else timedelta(days=30))
 
-    items = list(mongo.db.entires.find({
+    items = list(mongo.db.entries.find({
         "userId": user_id,
         "createdAt": {"$gte": start_date, "$lte": end_date}
     }))
