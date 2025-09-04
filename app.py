@@ -365,12 +365,12 @@ def get_garden():
                 "nextStageNeeds": max(0, [2, 5, 10][["seedling", "sprouting", "growing"].index(stage_for(count))] - count) if stage_for(count) != "blooming" else 0,
             })
 
-        return jsonify({"success": True,
-              "userId": user_id, 
-              "garden": garden
-              "totalPlants": len(garden),
-              "bloomingPlants": len([g for g in garden if g["stage"] == "blooming"])
-              }), 200
+        return jsonify({
+            "success": True,
+            "garden": garden,
+            "totalPlants": len(garden),
+            "bloomingPlants": len([p for p in garden if p["stage"] == "blooming"])
+        }), 200
     
     except Exception as e:
         logger.error(f"Error fetching garden: {str(e)}")
@@ -417,15 +417,38 @@ def analyze_sentiment(text: str):
         return {"sentiment": 0, "confidence": 0, "emotion": "neutral"}
 
 
-
+# summarization
 def summarize(text: str) -> str:
-    parts = [s.strip() for s in re.split(r"[.!?]+", text) if len(s.strip()) > 10]
-    if not parts:
+    try:
+        # split into sentences 
+        sentences = [s.strip() for s in re.split(r"[.!?]+", text) if len(s.strip()) > 10]
+
+        if not sentences:
+            return (text[:100] + "...") if len(text) > 100 else text
+        
+        if len(sentences) == 1:
+            return sentences[0]
+        
+        # for long texts
+        if len(sentences) > 3:
+            scored_sentences = []
+            for i, sentence in enumerate(sentences):
+                score = len(sentence) # long sentence -> more likely to be informative
+                if i == 0 or i == len(sentences) - 1: # first or last sentence
+                    score *= 1.2 # boost bcuz first and last sentences are usually more important
+                scored_sentences.append((sentence, score))
+
+            # take the top two sentences
+            scored_sentences.sort(key=lambda x: x[1], reverse=True)
+            selected = [s[0] for s in scored_sentences[:2]]
+            return ". ".join(selected) + "."
+        else:
+            return ". ".join(sentences[:2]) + "."
+    
+    
+    except Exception as e:
+        logger.error(f"Error in summarization: {str(e)}")
         return (text[:100] + "...") if len(text) > 100 else text
-    if len(parts) == 1:
-        return parts[0]
-    # take the first two decent sentences
-    return ". ".join(parts[:2]) + "."
 
 def extract_themes(text: str):
     t = text.lower()
