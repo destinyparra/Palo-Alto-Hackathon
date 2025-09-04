@@ -5,9 +5,19 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 
+# analysis helpers
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from textblob import TextBlob
+import re
+
+
 
 # Read environment variables from .env file
 load_dotenv()
+
+# Sentiment Analysis Endpoint
+vader = SentimentIntensityAnalyzer()
+
 
 app = Flask(__name__)
 CORS(app)
@@ -34,10 +44,14 @@ def create_entry():
     if not text:
         return jsonify({"error": "Text is required"}), 400
 
+    analysis = analyze_sentiment(text)
     doc = {
         "userId": user_id,
         "text": text,
         "createdAt": datetime.utcnow(),
+        "sentiment": analysis["sentiment"],
+        "emotion": analysis["emotion"],
+        # "summary": summarize(text),
 
     }
     result = mongo.db.entries.insert_one(doc)
@@ -65,6 +79,27 @@ def get_entries():
     return jsonify(items), 200
 
 
+def analyze_sentiment(text: str):
+    scores = vader.polarity_scores(text)
+    v = scores.get('compound', 0.0)  # <- correct key + safe default
+    b = TextBlob(text).sentiment.polarity
+    score = 0.6 * v + 0.4 * b
+    emotion = (
+        "very_positive" if score >= 0.5 else
+        "positive"       if score >= 0.1 else
+        "neutral"        if score >  -0.1 else
+        "negative"       if score >  -0.5 else
+        "very_negative"
+    )
+    return {"sentiment": score, "emotion": emotion}
+
+def summarize(text):
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?]) +', text) if s.strip()]
+    if not sentences:
+        return text[:100] + "..."
+    if len(sentences) == 1:
+        return sentences[0]
+    return ". ".join(sentences[:2]) + "."
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
