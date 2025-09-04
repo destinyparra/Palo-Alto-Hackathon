@@ -224,6 +224,7 @@ def create_entry():
         themes = extract_themes(text)
         summary = summarize(text)
 
+
         # create document
         doc = {
             "userId": user_id,
@@ -234,6 +235,11 @@ def create_entry():
             "summary": summary,
             "themes": themes,
         }
+        # Save reflection fields if present
+        if "isReflection" in data:
+            doc["isReflection"] = bool(data["isReflection"])
+        if "originalEntryId" in data and data["originalEntryId"]:
+            doc["originalEntryId"] = data["originalEntryId"]
 
         result = mongo.db.entries.insert_one(doc)
 
@@ -416,27 +422,37 @@ def get_garden():
     except Exception as e:
         logger.error(f"Error fetching garden: {str(e)}")
         return jsonify({"error": "Failed to fetch garden"}), 500
-
-# Reflection endpoint
+    
+    
+# Update the existing reflection endpoint to support exclusions
 @app.route("/api/reflect", methods=["GET"])
 def get_reflection():
     try:
         user_id = request.args.get("userId", "default_user")
+        exclude_ids = request.args.getlist("exclude")  # Allow excluding specific entry IDs
 
         # Only get entries older than one day old for reflections
         # one_day_ago = datetime.utcnow() - timedelta(days=1)
-
         # dev test to allow same-day reflections
         one_day_ago = datetime.utcnow() - timedelta(hours=1)
 
-        old_entries = list(mongo.db.entries.find({
+        # Build query to exclude specific IDs
+        query = {
             "userId": user_id,
             "createdAt": {"$lte": one_day_ago},
             "isReflection": {"$ne": True}  # exclude past reflections
-        }).limit(20)) 
+        }
         
-        # if perfomance is an issue: limit to last 20 for performance
-        # .sort("createdAt", -1).limit(20))
+        if exclude_ids:
+            try:
+                from bson.objectid import ObjectId
+                exclude_object_ids = [ObjectId(id) for id in exclude_ids if ObjectId.is_valid(id)]
+                if exclude_object_ids:
+                    query["_id"] = {"$nin": exclude_object_ids}
+            except:
+                pass  # If any IDs are invalid, just ignore them
+
+        old_entries = list(mongo.db.entries.find(query).limit(20))
 
         if not old_entries:
             return jsonify({
@@ -458,14 +474,65 @@ def get_reflection():
                 "What has changed since you wrote this?",
                 "What would you tell the person who wrote this?",
                 "What patterns do you notice in your growth?",
-                "How might you approach this situation differently now?"
+                "How might you approach this situation differently now?",
+                "What wisdom have you gained since writing this?",
+                "How has your perspective evolved?",
+                "What surprises you about this past version of yourself?",
+                "What would you want to remember from this moment?",
+                "How does this entry make you feel about your journey?"
             ])
         }), 200
 
-    
     except Exception as e:
         logger.error(f"Error fetching reflection entries: {str(e)}")
         return jsonify({"error": "Failed to fetch reflection entries"}), 500
+    
+# get relfections for a user
+@app.route("/api/reflections", methods=["GET"])
+def get_reflections():
+    try:
+        user_id = request.args.get("userId", "default_user")
+        limit = min(int(request.args.get("limit", 20)), 50)  # max 50
+        skip = int(request.args.get("skip", 0))
+
+        items = list(
+            mongo.db.entries.find({
+                "userId": user_id,
+                "isReflection": True  # Only get reflection entries
+            })
+            .sort("createdAt", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+        
+        # Format dates and get original entries
+        for item in items:
+            item["_id"] = str(item["_id"])
+            if hasattr(item.get("createdAt"), "isoformat"):
+                item["createdAt"] = item["createdAt"].isoformat()
+            
+            # Get the original entry if it exists
+            if item.get("originalEntryId"):
+                try:
+                    from bson.objectid import ObjectId
+                    original_entry = mongo.db.entries.find_one({"_id": ObjectId(item["originalEntryId"])})
+                    if original_entry:
+                        original_entry["_id"] = str(original_entry["_id"])
+                        if hasattr(original_entry.get("createdAt"), "isoformat"):
+                            original_entry["createdAt"] = original_entry["createdAt"].isoformat()
+                        item["originalEntry"] = original_entry
+                except:
+                    pass  # If originalEntryId is invalid, just skip
+
+        return jsonify({
+            "success": True,
+            "reflections": items,
+            "count": len(items),
+            "hasMore": len(items) == limit
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching reflections: {str(e)}")
+        return jsonify({"error": "Failed to fetch reflections"}), 500
 
 
 
