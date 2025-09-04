@@ -250,50 +250,85 @@ def get_entries():
         return jsonify({"error": "Failed to fetch entries"}), 500
 
 
+# Fetching insights
 @app.route("/api/insights", methods=["GET"])
 def get_insights():
-    user_id = request.args.get("userId", "default_user")
-    period = request.args.get("period", "weekly") #weekly or monthly
-    end_date = datetime.utcnow()
-    start_date = end_date - (timedelta(days=7) if period == "weekly" else timedelta(days=30))
+    try:
+        user_id = request.args.get("userId", "default_user")
+        period = request.args.get("period", "weekly") #weekly or monthly
 
-    items = list(mongo.db.entries.find({
-        "userId": user_id,
-        "createdAt": {"$gte": start_date, "$lte": end_date}
-    }))
+        # calc date range
+        # change later to use accurate month handling
+        end_date = datetime.utcnow()
+        if period == "weekly":
+            start_date = end_date - timedelta(days=7)
+        elif period == "monthly":
+            start_date = end_date - timedelta(month=30)
+        else:
+            start_date = end_date - timedelta(days=7)  # default to weekly
 
-    if not items:
-            return jsonify({
-                "userId": user_id,
-                "entryCount": 0,
-                "avgSentiment": 0,
-                "topThemes": [],
-                "themeCounts": {},
-                "startDate": start_date.isoformat(),
-                "endDate": end_date.isoformat(),
-                "period": period
-            }), 200
+        items = list(mongo.db.entries.find({
+            "userId": user_id,
+            "createdAt": {"$gte": start_date, "$lte": end_date}
+        }))
+
+        if not items:
+                return jsonify({
+                    "success": True,
+                    "userId": user_id,
+                    "entryCount": 0,
+                    "avgSentiment": 0,
+                    "topThemes": [],
+                    "themeCounts": {},
+                    "insights": {},
+                    "startDate": start_date.isoformat(),
+                    "endDate": end_date.isoformat(),
+                    "period": period
+                }), 200
+        
+        # basic stats
+        sentiments = [e.get("sentiment", 0) for e in items]
+        avg_sentiment = sum(sentiments) / len(sentiments)
+
+        # themes analysis
+        all_themes = []
+        for e in items:
+            themes = e.get("themes", [])
+            if isinstance(themes, list):
+                all_themes.extend(themes)
+
+            
+        theme_counts = Counter(all_themes)
+        top_themes = [theme for theme, count in theme_counts.most_common(3)]
+
+        # Advanced insights
+        word_counts = [e.get("wordCount", 0) for e in items if e.get("wordCount")]
+        avg_word_count = sum(word_counts) / len(word_counts) if word_counts else 0
+
+        insights = {
+            "avgWordCount": round(avg_word_count, 1),
+            "sentimentTrend": "improving" if len(sentiments) > 1 and sentiments[0] > sentiments[-1] else "stable",
+            "writingFrequency": len(items) / 7 if period == "weekly" else len(items) / 30,
+            "emotionalRange": max(sentiments) - min(sentiments) if sentiments else 0
+
+        }
+
+        return jsonify({
+            "success": True,
+            "userId": user_id,
+            "entryCount": len(items),
+            "avgSentiment": round(avg_sentiment, 3),
+            "topThemes": top_themes,
+            "themeCounts": dict(theme_counts),
+            "insights": insights,
+            "startDate": start_date.isoformat(),
+            "endDate": end_date.isoformat(),
+            "period": period
+        }), 200
     
-    sentiments = [e.get("sentiment", 0) for e in items]
-    avg_sentiment = sum(sentiments) / len(sentiments)
-
-    all_themes = []
-    for e in items:
-        if isinstance(e.get("themes"), list):
-            all_themes.extend(e.get("themes"))
-    counts = Counter(all_themes)
-    top3 = [k for k, _ in counts.most_common(3)]
-
-    return jsonify({
-        "userId": user_id,
-        "entryCount": len(items),
-        "avgSentiment": avg_sentiment,
-        "topThemes": top3,
-        "themeCounts": dict(counts),
-        "startDate": start_date.isoformat(),
-        "endDate": end_date.isoformat(),
-        "period": period
-    }), 200
+    except Exception as e:
+        logger.error(f"Error fetching insights: {str(e)}")
+        return jsonify({"error": "Failed to fetch insights"}), 500
 
 @app.route("/api/garden", methods=["GET"])
 def get_garden():
