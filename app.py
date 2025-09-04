@@ -332,38 +332,49 @@ def get_insights():
 
 @app.route("/api/garden", methods=["GET"])
 def get_garden():
-    user_id = request.args.get("userId", "default_user")
+    try:
+        user_id = request.args.get("userId", "default_user")
 
-    pipeline = [
-        {"$match": {"userId": user_id}},
-        {"$unwind": {"path": "$themes", "preserveNullAndEmptyArrays": False}},
-        {"$group": {"_id": "$themes", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}}
-    ]
+        pipeline = [
+            {"$match": {"userId": user_id}},
+            {"$unwind": {"path": "$themes", "preserveNullAndEmptyArrays": False}},
+            {"$group": {"_id": "$themes", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
 
-    theme_data = list(mongo.db.entries.aggregate(pipeline))
+        theme_data = list(mongo.db.entries.aggregate(pipeline))
 
-    def stage_for(count: int) -> str:
-        if count >= 10:
-            return "blooming"
-        elif count >= 5:
-            return "growing"
-        elif count >= 2:
-            return "sprouting"
-        return "seedling"
-        
-    # map to objects
-    garden = []
-    for row in theme_data:
-        theme = row["_id"]
-        count = row["count"]
-        garden.append({
-            "theme": theme,
-            "count": count,
-            "stage": stage_for(count)
-        })
+        def stage_for(count: int) -> str:
+            if count >= 10:
+                return "blooming"
+            elif count >= 5:
+                return "growing"
+            elif count >= 2:
+                return "sprouting"
+            return "seedling"
+            
+        # map to objects
+        garden = []
+        for row in theme_data:
+            theme = row["_id"]
+            count = row["count"]
+            garden.append({
+                "theme": theme,
+                "count": count,
+                "stage": stage_for(count),
+                "nextStageNeeds": max(0, [2, 5, 10][["seedling", "sprouting", "growing"].index(stage_for(count))] - count) if stage_for(count) != "blooming" else 0,
+            })
 
-    return jsonify(garden), 200
+        return jsonify({"success": True,
+              "userId": user_id, 
+              "garden": garden
+              "totalPlants": len(garden),
+              "bloomingPlants": len([g for g in garden if g["stage"] == "blooming"])
+              }), 200
+    
+    except Exception as e:
+        logger.error(f"Error fetching garden: {str(e)}")
+        return jsonify({"error": "Failed to fetch garden"}), 500
 
 
 def analyze_sentiment(text: str):
